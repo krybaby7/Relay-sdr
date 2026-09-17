@@ -1,0 +1,53 @@
+name: Publish recovery checkpoint
+
+on:
+  push:
+    branches: ['recovery/ai-leads-workspace-2026-09-17']
+    paths: ['.github/workflows/publish-recovery.yml']
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: relay-recovery-publication
+  cancel-in-progress: false
+
+jobs:
+  preserve:
+    if: github.repository == 'krybaby7/Relay-sdr' && github.ref == 'refs/heads/recovery/ai-leads-workspace-2026-09-17'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Retrieve the exact historical baseline artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api repos/krybaby7/Relay-sdr/actions/artifacts/10511895652/zip > "$RUNNER_TEMP/relay-recovery-toolchain.zip"
+      - name: Publish only checksum-verified text files
+        run: |
+          set -euo pipefail
+          python recovery/publish_checkpoint.py "$RUNNER_TEMP/relay-recovery-toolchain.zip"
+          python recovery/ai-leads-workspace-v2/verify_github_checkpoint.py
+      - name: Commit source checkpoint to the recovery branch only
+        run: |
+          set -euo pipefail
+          branch='recovery/ai-leads-workspace-2026-09-17'
+          test "$GITHUB_REF" = "refs/heads/$branch"
+          remote_sha="$(git ls-remote --heads origin "refs/heads/$branch" | cut -f1)"
+          test "$remote_sha" = "$GITHUB_SHA" || { echo 'Branch advanced: refusing to overwrite newer changes.'; exit 1; }
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- recovery/ai-leads-workspace-v2
+          if git diff --cached --quiet; then
+            echo 'Exact native checkpoint already committed.'
+          else
+            git commit -m 'chore(recovery): publish 67 verified original text files and restoration handoff'
+            git push origin "HEAD:refs/heads/$branch"
+          fi
+          git rev-parse HEAD
