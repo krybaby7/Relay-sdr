@@ -11,7 +11,9 @@ export async function api<T>(path: string, method = 'GET', body?: unknown, signa
     const detail = typeof error.detail === 'string' ? error.detail : JSON.stringify(error.detail || `HTTP ${response.status}`);
     throw new ApiError(detail, response.status);
   }
-  return response.json() as Promise<T>;
+  const value = await response.json() as T;
+  if (signal?.aborted || sessionStorage.getItem('relay-token') !== token) throw new DOMException('Request superseded', 'AbortError');
+  return value;
 }
 export const label = (value: unknown) => value === undefined || value === null || value === '' ? 'Unknown' : String(value).replaceAll('_', ' ');
 export function date(value: string | null | undefined, zone = 'Africa/Cairo') {

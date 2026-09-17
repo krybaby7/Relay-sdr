@@ -41,3 +41,9 @@ Fresh isolated verification: `python -m compileall -q app` and `python -m pytest
 Exact-source backend fixes verified in Actions run 35280381231. Human precedence now applies to procurement, proposal, budget and other supported facts; approved playbook gates fit; practice redaction does not erase real intelligence; provider reads are bounded; terminal capture and generation checks reject stale results; paginated scoped history and note-source APIs are connected.
 
 Local acceptance run before this checkpoint: 155 tests passed (87 baseline + 68 workspace cases), one upstream Starlette/AnyIO deprecation warning. Frontend type-check/lint/build passed; first two Chromium desktop/mobile source-navigation tests passed after fixing initial grid measurement. Expanded browser tests and final frontend publication remain in progress. No live model/provider calls, deployment or lead contact. Recovery remains unchanged.
+
+## Preservation milestone: interrupted frontend and tests
+
+On 2026-09-18, the user requested a durable checkpoint and fresh-chat prompt. Recovered the missing stylesheet, 68-case backend suite, browser fixture, expanded eight-case browser suite and frontend package scripts. Restored five native frontend files using guarded transformations recovered from the interrupted execution record. The original working tree and lockfile did not survive; this is a reconstructed checkpoint, not a byte-identical filesystem recovery or completed release. See `continuation/PRESERVED-FRONTEND.json` for source hashes and replacement counts.
+
+This source checkpoint was published before new verification in Actions run 35285742889. The original recovery directory remains unchanged. Do not reapply the already-applied restoration script or prior backend patches. Fresh verification will be recorded separately; historical test passes do not validate this reconstructed tree.

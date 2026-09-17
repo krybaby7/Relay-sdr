@@ -1,11 +1,11 @@
-import { createContext, useContext } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { defineCatalog } from '@json-render/core';
 import { schema } from '@json-render/react/schema';
 import { defineRegistry } from '@json-render/react';
 import { z } from 'zod';
-import type { Bootstrap, Dataset, Detail, LeadRow, Reference, Widget, Task, Query } from './types';
+import type { Bootstrap, Dataset, Detail, LeadRow, Reference, Widget, Task, Query, CallRow } from './types';
 import { Badge, Empty, Icon } from './ui';
-import { date, label } from './api';
+import { api, date, label } from './api';
 
 // Deliberately closed leaf components. catalog.prompt() is NEVER called: version
 // 0.20.0's default sample-data instructions are incompatible with live CRM data.
@@ -17,7 +17,7 @@ export const catalog = defineCatalog(schema, { components: {
 }, actions: {} });
 
 interface Context {
-  bootstrap: Bootstrap; data: Dataset; detail: Detail | null; query: Query;
+  viewId: string; bootstrap: Bootstrap; data: Dataset; detail: Detail | null; query: Query;
   selected: Set<string>; toggleSelection: (id: string) => void;
   openLead: (id: string) => void; openCall: (id: string, ref?: Reference) => void;
   evidence: (ref: Reference) => void; task: (task: Task, status: string) => void;
@@ -59,15 +59,35 @@ function PipelineBoard({ widgetId }: { widgetId: string }) {
   if (!ctx.data.metrics.total) return <Empty title="The pipeline starts with evidence" text="No real leads match this view. Connection status alone never creates a qualified opportunity."/>;
   return <><div className="board">{stages.map(stage => <section className="board-column" key={stage}><h3>{label(stage)}<span>{ctx.data.metrics.stages.find(s => s.stage === stage)?.count || 0}</span></h3>{ctx.data.records.items.filter(row => row.stage === stage).map(row => <button className="board-card" key={row.id} onClick={() => ctx.openLead(row.id)}><strong>{row.name}</strong><small>{row.company}</small><Badge value={row.potential}/><span>{label(row.priority)}</span></button>)}</section>)}</div><p className="widget-footnote">Stage counts cover this view. Cards show the current directory page; open a card to inspect its evidence.</p></>;
 }
+function useWidgetPage<T>(endpoint: 'tasks' | 'calls', ctx: Context, limit: number) {
+  const [page, setPage] = useState(1); const [value, setValue] = useState<{items: T[]; has_more: boolean} | null>(null); const [error, setError] = useState('');
+  const queryKey = JSON.stringify(ctx.query); const cursor = ctx.bootstrap.cursor;
+  useEffect(() => { setPage(1); }, [queryKey, ctx.viewId, limit]);
+  useEffect(() => {
+    const controller = new AbortController(); setError('');
+    void api<{items: T[]; has_more: boolean}>(`/api/workspace/${endpoint}/query`, 'POST', {view_id: ctx.viewId, query: JSON.parse(queryKey), page, page_size: limit}, controller.signal).then(setValue).catch(e => { if (!controller.signal.aborted) setError((e as Error).message); });
+    return () => controller.abort();
+  }, [endpoint, queryKey, ctx.viewId, page, limit, cursor]);
+  return {page, setPage, value, error};
+}
+function WidgetPages({ page, hasMore, change }: {page:number; hasMore:boolean; change:(page:number)=>void}) {
+  return <div className="pager"><span>Page {page}</span><div><button disabled={page === 1} onClick={() => change(page - 1)}>Previous page</button><button disabled={!hasMore} onClick={() => change(page + 1)}>Next page</button></div></div>;
+}
 function Commitments({ widgetId }: { widgetId: string }) {
   const [ctx, widget] = useWidget(widgetId);
-  if (!ctx.data.tasks.items.length) return <Empty title="No recorded commitments" text="Agreements and recommendations stay separate. Saving a follow-up never calls or messages anyone."/>;
-  return <div className="task-list">{ctx.data.tasks.items.slice(0, widget.limit).map(task => <article className="task-item" key={task.id}><div className="task-icon"><Icon name="clock"/></div><div><button className="text-button" onClick={() => ctx.openLead(task.lead_id)}>{task.name || 'Open lead'}</button><p>{task.data.wording}</p><div className="tags"><Badge value={task.status}/><Badge>{task.data.nature === 'extracted_commitment' ? `${label(task.party)} commitment` : label(task.data.nature)}</Badge></div><small>{task.due_at ? date(task.due_at, ctx.bootstrap.timezone) : task.data.date_phrase || 'Date not agreed'} · {label(task.data.date_resolution)}</small>{task.data.reference && <EvidenceLink reference={task.data.reference}/>}<div className="task-actions"><button onClick={() => ctx.task(task, task.status === 'done' ? 'open' : 'done')}>{task.status === 'done' ? 'Reopen internal task' : 'Mark internal task done'}</button></div></div></article>)}<p className="widget-footnote">Showing up to {widget.limit} of {ctx.data.tasks.total} internal tasks. Requests are not bookings or transfers.</p></div>;
+  const result = useWidgetPage<Task>('tasks', ctx, widget.limit);
+  if (result.error) return <p className="error">{result.error}</p>;
+  if (!result.value) return <p className="loading">Loading internal tasks…</p>;
+  if (!result.value.items.length) return <Empty title="No recorded commitments" text="Agreements and recommendations stay separate. Saving a follow-up never calls or messages anyone."/>;
+  return <div className="task-list">{result.value.items.map(task => <article className="task-item" key={task.id}><div className="task-icon"><Icon name="clock"/></div><div><button className="text-button" onClick={() => ctx.openLead(task.lead_id)}>{task.name || 'Open lead'}</button><p>{task.data.wording}</p><div className="tags"><Badge value={task.status}/><Badge>{task.data.nature === 'extracted_commitment' ? `${label(task.party)} commitment` : label(task.data.nature)}</Badge></div><small>{task.due_at ? date(task.due_at, ctx.bootstrap.timezone) : task.data.date_phrase || 'Date not agreed'} · {label(task.data.date_resolution)}</small>{task.data.reference && <EvidenceLink reference={task.data.reference}/>}<div className="task-actions"><button onClick={() => ctx.task(task, task.status === 'done' ? 'open' : 'done')}>{task.status === 'done' ? 'Reopen internal task' : 'Mark internal task done'}</button></div></div></article>)}<p className="widget-footnote">Showing up to {widget.limit} of {ctx.data.tasks.total} internal tasks. Requests are not bookings or transfers.</p><WidgetPages page={result.page} hasMore={result.value.has_more} change={result.setPage}/></div>;
 }
 function CallTimeline({ widgetId }: { widgetId: string }) {
   const [ctx, widget] = useWidget(widgetId);
-  if (!ctx.data.calls.items.length) return <Empty title="No calls captured in this view" text="Every captured call remains available, including unanswered attempts and practice sessions in their own view."/>;
-  return <div className="timeline">{ctx.data.calls.items.slice(0, widget.limit).map(call => <button className="timeline-item" key={call.call_id} onClick={() => ctx.openCall(call.call_id)}><span className="timeline-dot"/><span><strong>{call.name || (call.kind === 'simulation' ? 'Scripted demo' : 'Unlinked practice')}</strong><small>{date(call.created_at, ctx.bootstrap.timezone)}</small><span className="tags"><Badge value={call.status}/><Badge>{call.kind === 'twilio' ? 'Phone record' : 'Practice only'}</Badge></span><small>{call.segment_count} captured fragments · {call.dropped ? 'Capture truncated' : call.close_observed ? 'Close observed; completeness unverified' : 'Incomplete / unverified capture'}</small></span><Icon name="arrow" size={15}/></button>)}</div>;
+  const result = useWidgetPage<CallRow>('calls', ctx, widget.limit);
+  if (result.error) return <p className="error">{result.error}</p>;
+  if (!result.value) return <p className="loading">Loading captured calls…</p>;
+  if (!result.value.items.length) return <Empty title="No calls captured in this view" text="Every captured call remains available, including unanswered attempts and practice sessions in their own view."/>;
+  return <div className="timeline">{result.value.items.map(call => <button className="timeline-item" key={call.call_id} onClick={() => ctx.openCall(call.call_id)}><span className="timeline-dot"/><span><strong>{call.name || (call.kind === 'simulation' ? 'Scripted demo' : 'Unlinked practice')}</strong><small>{date(call.created_at, ctx.bootstrap.timezone)}</small><span className="tags"><Badge value={call.status}/><Badge>{call.kind === 'twilio' ? 'Phone record' : 'Practice only'}</Badge></span><small>{call.segment_count} captured fragments · {call.dropped ? 'Capture truncated' : call.close_observed ? 'Close observed; completeness unverified' : 'Incomplete / unverified capture'}</small></span><Icon name="arrow" size={15}/></button>)}<WidgetPages page={result.page} hasMore={result.value.has_more} change={result.setPage}/></div>;
 }
 function EvidencePanel({ widgetId }: { widgetId: string }) {
   const [ctx] = useWidget(widgetId); const assessment = ctx.detail?.assessment?.data;
