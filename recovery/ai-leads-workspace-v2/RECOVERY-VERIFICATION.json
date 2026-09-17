@@ -1,0 +1,34 @@
+{
+  "snapshot": "Recovery v2; not a completed feature release",
+  "created_at_utc": "2026-09-17T18:55:53.272797+00:00",
+  "recovered_source_files": 22,
+  "recovered_source_bytes": 220343,
+  "baseline_files": 32,
+  "python_syntax": {
+    "parsed_files": 26,
+    "result": "passed",
+    "method": "ast.parse, without executing or importing application code; includes recovery verifier"
+  },
+  "javascript_typescript_syntax": {
+    "typescript": "5.9.3",
+    "checked_files": 10,
+    "syntax_errors": [],
+    "scope": "Parse diagnostics only; not type checking, lint, build, or browser execution."
+  },
+  "screenshots": {
+    "count": 3,
+    "provenance": "Prior interrupted implementation; not rerendered in recovery"
+  },
+  "not_run": [
+    "functional backend tests on recovery tree",
+    "frontend type checking",
+    "frontend lint",
+    "frontend build",
+    "browser tests",
+    "live model calls",
+    "live provider integration"
+  ],
+  "github_recovery_writes": false,
+  "calling_or_deployment_performed": false,
+  "secrets_runtime_databases_dependency_caches_and_font_binaries_included": false
+}

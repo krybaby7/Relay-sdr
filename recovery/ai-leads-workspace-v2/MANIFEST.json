@@ -1,0 +1,352 @@
+{
+  "schema_version": 1,
+  "snapshot": "Relay SDR recovery checkpoint v2 — 2026-09-17",
+  "note": "Integrity manifest excludes itself. No claim of complete final-source fidelity or functional verification.",
+  "files": [
+    {
+      "path": "RECOVERY-VERIFICATION.json",
+      "bytes": 1103,
+      "sha256": "4cacfa3c9f9a8ab7f22c27190b3979b96e405ee5f928b70be07841d7b65c515b"
+    },
+    {
+      "path": "RECOVERY.md",
+      "bytes": 4697,
+      "sha256": "8100380f792468da22e1baec85eaf105151aea9df1eed3ca06debb3ba39f194b"
+    },
+    {
+      "path": "RESUME.md",
+      "bytes": 6210,
+      "sha256": "a1e1d1ca8c5fa8e34d877fc8892fb6c8832d92eb95e4ed094af0c21878cefe1c"
+    },
+    {
+      "path": "Relay-sdr/.env.example",
+      "bytes": 938,
+      "sha256": "fd2b1b4e62ba19fc068752860661e51dd8c3bfb7e2aed95e1681c95f7f7d38fb"
+    },
+    {
+      "path": "Relay-sdr/.github/workflows/workspace-ci.yml",
+      "bytes": 2387,
+      "sha256": "a6203a7f24b2acf437820e7407b36113d5f83cb06f45a5e71d871c2ac5333369"
+    },
+    {
+      "path": "Relay-sdr/.gitignore",
+      "bytes": 53,
+      "sha256": "6acbc8dc65a98464b2907d290d2112876357f705ee2de40b82309236f6b4f303"
+    },
+    {
+      "path": "Relay-sdr/README.md",
+      "bytes": 13878,
+      "sha256": "df522428a44fd5a0b196718844f32d4715eb40fa41936a5db23b6a7d9837cd6d"
+    },
+    {
+      "path": "Relay-sdr/SHA256SUMS.txt",
+      "bytes": 2931,
+      "sha256": "288c57390688eaeecdcab24e07d21efa6c97645dda93c234fc60cab00d8e1794"
+    },
+    {
+      "path": "Relay-sdr/app/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "Relay-sdr/app/config.py",
+      "bytes": 4624,
+      "sha256": "78f4473001874e75e687c1ce27f899c3fb077c9c109a5094568a430d208f3694"
+    },
+    {
+      "path": "Relay-sdr/app/db.py",
+      "bytes": 6965,
+      "sha256": "691abafe4b334565ad4a89db94aa6fefaea935862451ec35fe766fa76aca1923"
+    },
+    {
+      "path": "Relay-sdr/app/live.py",
+      "bytes": 17677,
+      "sha256": "2035bafa36f4ae3dc6eac9a7fbcdbf8988f7841e6d28c48cd557a81acfb54349"
+    },
+    {
+      "path": "Relay-sdr/app/main.py",
+      "bytes": 30880,
+      "sha256": "7c2762a76631f1bd8519271ec371908f39e8ee0f1ea1126b47293a05c756160a"
+    },
+    {
+      "path": "Relay-sdr/app/models.py",
+      "bytes": 4138,
+      "sha256": "70784a97816e1f49e8e7feb5a54d6c3535d1e8bff04c0d53b5c47eb6d65aa80f"
+    },
+    {
+      "path": "Relay-sdr/app/policy.py",
+      "bytes": 2379,
+      "sha256": "60ec283ffdca4be8438709a7ff0b16c6c2e95ba864258ea4ab9c3b6d249b4cf5"
+    },
+    {
+      "path": "Relay-sdr/app/telephony.py",
+      "bytes": 2426,
+      "sha256": "cc5794467bccf20bb6b38c92e6c22c5ada3b6a5535ea9e0b476ab40da60aa8f1"
+    },
+    {
+      "path": "Relay-sdr/docs/API-RESEARCH.md",
+      "bytes": 4062,
+      "sha256": "65526b6bed7b8e4fcf3f76f92ce84bb91042a5103b2841a9a042370747d1ebf3"
+    },
+    {
+      "path": "Relay-sdr/docs/GITHUB-IMPORT.md",
+      "bytes": 921,
+      "sha256": "52946698385cab80e1f5ace8ab19735a133fb8a87d04181ede1b109e8c6cad50"
+    },
+    {
+      "path": "Relay-sdr/docs/INTEGRATIONS.md",
+      "bytes": 6343,
+      "sha256": "f2ee6ca84b51eb2409bb87d59b1ee99cb38149d3070df2f8196015cd79228e9c"
+    },
+    {
+      "path": "Relay-sdr/docs/VERIFICATION.md",
+      "bytes": 4328,
+      "sha256": "d134272ba676e68dd92584f0623b926e8ca6abe22cfd7ae92730119c8ac631d8"
+    },
+    {
+      "path": "Relay-sdr/docs/test-results.txt",
+      "bytes": 179,
+      "sha256": "a959f93e91538c5a2f95e9b4623904dccd746b3580c641661e26d39092d03463"
+    },
+    {
+      "path": "Relay-sdr/docs/ui-results.json",
+      "bytes": 1022,
+      "sha256": "fa5bc2459bea9bf27520146e6f080c89c0dc671047133f8ae9234559696ebbda"
+    },
+    {
+      "path": "Relay-sdr/requirements-dev.txt",
+      "bytes": 56,
+      "sha256": "e83effff3c4458ca74fe7a23d560ca67eff288b24e21ec0c2290a47df5206a4a"
+    },
+    {
+      "path": "Relay-sdr/requirements.txt",
+      "bytes": 117,
+      "sha256": "b806d310ddc2c4b58a77ac13e2fa87d7f676893db2ef5b0db62102f629c2308c"
+    },
+    {
+      "path": "Relay-sdr/run.py",
+      "bytes": 805,
+      "sha256": "a6c0cd3aa0e8d21b2e5ea4f0d9902796ac922c67f1f0bb70eda497e51f3eae57"
+    },
+    {
+      "path": "Relay-sdr/tests/conftest.py",
+      "bytes": 2207,
+      "sha256": "fb6499c29c9edac84643270cdf46b28c2242bbf3ffb735b4752e030abac5e58a"
+    },
+    {
+      "path": "Relay-sdr/tests/test_api.py",
+      "bytes": 9392,
+      "sha256": "d76861636feb8720292a2024d23425d47fb55982820cff23332e400627d9bb3d"
+    },
+    {
+      "path": "Relay-sdr/tests/test_live_bridge.py",
+      "bytes": 6342,
+      "sha256": "35695b82118aa3806d2c70c9cd2d2eb64599fe91bc54141a18c4c9f11ed9a504"
+    },
+    {
+      "path": "Relay-sdr/tests/test_policy.py",
+      "bytes": 3752,
+      "sha256": "ab3ce051193c97fbcf68390b8d25f7ff60ab67666f0ff08528c99faa0c17094d"
+    },
+    {
+      "path": "Relay-sdr/tests/test_tools.py",
+      "bytes": 6305,
+      "sha256": "f2f70008868a04a1c256fd04f25021afb15da371e2bb00ae6b90c964f940e993"
+    },
+    {
+      "path": "Relay-sdr/tests/ui_smoke.py",
+      "bytes": 9202,
+      "sha256": "b3a371a7864f152ce116d7129b4b6f7f6742b4e1f20d60b7ef0e6cb7df34893d"
+    },
+    {
+      "path": "Relay-sdr/web/app.js",
+      "bytes": 44982,
+      "sha256": "3e3304c6b0e2a9300e1b2479da5c39ca51ea590353c5ec46a531d1796f26a94f"
+    },
+    {
+      "path": "Relay-sdr/web/capture-worklet.js",
+      "bytes": 909,
+      "sha256": "4acffe844ddd391367fec6500372574f7d14ba981100ab087233893aefb9833a"
+    },
+    {
+      "path": "Relay-sdr/web/index.html",
+      "bytes": 3538,
+      "sha256": "0f1f1c11fb6a9cd59a72bcfa5a0f82a7253ab41b0621cf8da5f8c23f9cbc4c8f"
+    },
+    {
+      "path": "Relay-sdr/web/styles.css",
+      "bytes": 22516,
+      "sha256": "29a75f4bd2e57ec94dafff6c93871e32bf1c4d8a8feec3eecd3932e87d50aee9"
+    },
+    {
+      "path": "recovered-dependency-manifests/audit.json",
+      "bytes": 364,
+      "sha256": "f49092f1d4b832cbac3ecb1eaf1f7b78b536fe3bb1b62f0fc6e603fb88f7510b"
+    },
+    {
+      "path": "recovered-dependency-manifests/baseline-test-results.txt",
+      "bytes": 757,
+      "sha256": "fb98fd97011d0087a8c10fce999fb5215bc840756466171010e159ced566afa6"
+    },
+    {
+      "path": "recovered-dependency-manifests/dependency-tree.json",
+      "bytes": 40811,
+      "sha256": "d6c3ecf74adf637433fd029ed831e7b674a92025428501544f64abc184653d18"
+    },
+    {
+      "path": "recovered-dependency-manifests/package-lock.json",
+      "bytes": 95361,
+      "sha256": "bc5e9b481d9cd2335278fd405546d979f96fcea08727b1263d24552ac242be14"
+    },
+    {
+      "path": "recovered-dependency-manifests/package.json",
+      "bytes": 753,
+      "sha256": "beaecc1bd8e0a9710a1a854164ca36bce110280fae3d5d4da6cbc6d2045da244"
+    },
+    {
+      "path": "recovered-dependency-manifests/python-audit.json",
+      "bytes": 21820,
+      "sha256": "d5a21eb743107bb131459451561f914c257232bcb37be3043d33bf75817003ca"
+    },
+    {
+      "path": "recovered-dependency-manifests/python-resolved.txt",
+      "bytes": 1390,
+      "sha256": "7b90abca81e0fdffd5de37ee797078de46112a86c2143fe4c7a0868ca12e0c21"
+    },
+    {
+      "path": "recovered-source/app/workspace/__init__.py",
+      "bytes": 79,
+      "sha256": "b6b6c727e8752e8d2f6d41149b83710963b1fb04116aecad646217b78b88d4e1"
+    },
+    {
+      "path": "recovered-source/app/workspace/evidence.py",
+      "bytes": 9259,
+      "sha256": "a647020924884a1c90d387af8e801d18038b01b87e81239c00cfd44a5519ea54"
+    },
+    {
+      "path": "recovered-source/app/workspace/intelligence.py",
+      "bytes": 16614,
+      "sha256": "2efcbed4fb22ba456d4a9cdf83bf410d9d0143f129abbd9d390261a7a892a7bf"
+    },
+    {
+      "path": "recovered-source/app/workspace/migrations.py",
+      "bytes": 10103,
+      "sha256": "e1ace4a5dcef1c6a2d03ca7f76f31a8beb3f80a2c4a6798bf3a6589184702a18"
+    },
+    {
+      "path": "recovered-source/app/workspace/model.py",
+      "bytes": 6314,
+      "sha256": "94553e98c03a7b1774400a2457b47b653b78c5d41c88469acd2c7fb8df290256"
+    },
+    {
+      "path": "recovered-source/app/workspace/presentation.py",
+      "bytes": 14964,
+      "sha256": "52773088f48fd65b8a2ae2dd55099a5158c861039b13de54f4840df8a19dec6f"
+    },
+    {
+      "path": "recovered-source/app/workspace/queries.py",
+      "bytes": 15185,
+      "sha256": "864987ba6de40209a98081ba8a12499f2f62cc26a728cce8bab11139118e12ca"
+    },
+    {
+      "path": "recovered-source/app/workspace/schema.py",
+      "bytes": 12388,
+      "sha256": "1c45b323b3d8146bc63e5e957079dacba382a53d6cf033dc5fe8901c947ba307"
+    },
+    {
+      "path": "recovered-source/app/workspace/worker.py",
+      "bytes": 27965,
+      "sha256": "7ebddc81d307e3faca7c87b9d1c988d1c2e91a1346e118e01c6d3092d6f21476"
+    },
+    {
+      "path": "recovered-source/frontend/eslint.config.js",
+      "bytes": 467,
+      "sha256": "a52548579f6da7b8ed04e0aff3391180bfc43568166cd293ab79698b6cc91283"
+    },
+    {
+      "path": "recovered-source/frontend/index.html",
+      "bytes": 318,
+      "sha256": "abd43ad5391e4204f061c2221572bc0df0bb773407e0f4eddd888377f6531382"
+    },
+    {
+      "path": "recovered-source/frontend/src/App.tsx",
+      "bytes": 37036,
+      "sha256": "b1074edc5209bf38dd9d32480c38e1f5530a9996cfddf8465b2d7f6de703b34a"
+    },
+    {
+      "path": "recovered-source/frontend/src/api.ts",
+      "bytes": 2837,
+      "sha256": "e99f7e31ac122d4408f175980fa829a1def78f6eeac1c283d67f5824ed3cdc43"
+    },
+    {
+      "path": "recovered-source/frontend/src/catalog.tsx",
+      "bytes": 13261,
+      "sha256": "c2c3c01c4eddf04bdaef0a64d94a87e996e45be88678d3956806365c686c775d"
+    },
+    {
+      "path": "recovered-source/frontend/src/details.tsx",
+      "bytes": 19605,
+      "sha256": "af1a601d1fec9a943d4d7fabfdcad1c0562b72adbf238bd68ed0ad4fc925c388"
+    },
+    {
+      "path": "recovered-source/frontend/src/editors.tsx",
+      "bytes": 18309,
+      "sha256": "f978c3960dd74db5bfab0d36f4c532a779d776813ffd18eae01ae7bd6898f8c1"
+    },
+    {
+      "path": "recovered-source/frontend/src/main.tsx",
+      "bytes": 209,
+      "sha256": "5103806b3016ec398ff848c1fc5216ef983789727cabe8d46a1247502092e6e9"
+    },
+    {
+      "path": "recovered-source/frontend/src/types.ts",
+      "bytes": 8236,
+      "sha256": "be193b52d102086539773a69b727a40e28d60b791f8814f7dbfab58169941dfd"
+    },
+    {
+      "path": "recovered-source/frontend/src/ui.tsx",
+      "bytes": 3289,
+      "sha256": "e790487668b984ee0397cabfabb63b3909a9259113c84b0305ace21a4006df17"
+    },
+    {
+      "path": "recovered-source/frontend/tsconfig.json",
+      "bytes": 339,
+      "sha256": "7b499fcd14e571f1c17eaf95e00cdc709c567e1ce9cfca889fc712b84f8e3e93"
+    },
+    {
+      "path": "recovered-source/frontend/vite.config.ts",
+      "bytes": 202,
+      "sha256": "bbfe66b68626af7d5172c52e5d6c1d130eea81ca2472fd5a073b289cd3eb4417"
+    },
+    {
+      "path": "recovered-source/tests/workspace_fixtures.py",
+      "bytes": 3364,
+      "sha256": "c9a872678aadc982bddfa7be3786354be6f5b33c0882c502d6a5288756277940"
+    },
+    {
+      "path": "requirements/Relay_SDR_AI_Leads_Workspace_Implementation_Prompt.md",
+      "bytes": 26772,
+      "sha256": "374627081dee116686dbfda9defe9668e2b612788cb6a5304d8434cd65b316de"
+    },
+    {
+      "path": "screenshots/workspace-evidence-desktop.png",
+      "bytes": 239205,
+      "sha256": "65e7ff4e0fb79bd3647bf082f2804af544f562b1a816cf2bb7135613d3a98cce"
+    },
+    {
+      "path": "screenshots/workspace-first-desktop.png",
+      "bytes": 184522,
+      "sha256": "3d99259b4d2bb848b37db3454d7aa4b5697985aaa92f547dcb65ffc25feb4589"
+    },
+    {
+      "path": "screenshots/workspace-third-mobile.png",
+      "bytes": 127917,
+      "sha256": "4b706f74ddf13186070ae1f25a8907eb56df8eb1976aab60c007e58e16b3d3f8"
+    },
+    {
+      "path": "verify_checkpoint.py",
+      "bytes": 1344,
+      "sha256": "599d282d0c2585b4f1433de7ececf260c053e1a74e1fd5e2140e379594c6d267"
+    }
+  ]
+}

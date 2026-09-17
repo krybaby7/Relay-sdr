@@ -1,0 +1,34 @@
+{
+  "name": "frontend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "overrides": {
+    "esbuild": "0.28.1"
+  },
+  "dependencies": {
+    "@json-render/core": "0.20.0",
+    "@json-render/react": "0.20.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-grid-layout": "2.2.4",
+    "zod": "4.3.6"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.2",
+    "@playwright/test": "1.62.0",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "eslint": "9.39.2",
+    "globals": "17.3.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.55.0",
+    "vite": "7.3.6"
+  }
+}

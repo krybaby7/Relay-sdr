@@ -1,0 +1,47 @@
+{
+  "original_manifest_sha256": "c6fefb9a8ce312567b66b6687f7a23522adc27e3b2c99c76522b3f104e187ca0",
+  "original_text_payload_hashes_verified": 66,
+  "original_text_files_including_manifest": 67,
+  "original_python_files_parsed": 26,
+  "historical_screenshots_not_published": [
+    "screenshots/workspace-evidence-desktop.png",
+    "screenshots/workspace-first-desktop.png",
+    "screenshots/workspace-third-mobile.png"
+  ],
+  "functional_tests_run": false,
+  "live_model_or_provider_tests_run": false,
+  "note": "Integrity and Python syntax only; not a complete or functionally verified implementation.",
+  "purpose": "Published recovery source, not a completed feature release",
+  "repository": "krybaby7/Relay-sdr",
+  "recovery_branch": "recovery/ai-leads-workspace-2026-09-17",
+  "source_archive_sha256": "4fecffa26cffe162762573b44499be77435621a25281f276a9d9f1ac4982953c",
+  "transport_sha256": "803b4d6830384709beba8ca37172b7be93b571500f3da172be479987a98e16ce",
+  "historical_dependency_artifact_id": 10511895652,
+  "historical_dependency_artifact_sha256": "842b186b3628d6c47b2adde635e5cf618ebe3fe010e2fefd9a7d0caca8972990",
+  "historical_artifact_dependency_after_publication": false,
+  "recovered_source_files": 22,
+  "screenshot_omission_reason": "Text-only GitHub transfer. Original PNGs remain in the original ZIP in the user's Library; they are not required to restore source.",
+  "omitted_files": [
+    {
+      "path": "screenshots/workspace-evidence-desktop.png",
+      "bytes": 239205,
+      "sha256": "65e7ff4e0fb79bd3647bf082f2804af544f562b1a816cf2bb7135613d3a98cce"
+    },
+    {
+      "path": "screenshots/workspace-first-desktop.png",
+      "bytes": 184522,
+      "sha256": "3d99259b4d2bb848b37db3454d7aa4b5697985aaa92f547dcb65ffc25feb4589"
+    },
+    {
+      "path": "screenshots/workspace-third-mobile.png",
+      "bytes": 127917,
+      "sha256": "4b706f74ddf13186070ae1f25a8907eb56df8eb1976aab60c007e58e16b3d3f8"
+    }
+  ],
+  "notes": [
+    "All 67 original text files, including the manifest, are preserved byte-for-byte.",
+    "The baseline source and dependency manifests are historical; they do not establish final compatible dependencies or passing feature tests.",
+    "No application, server, model, provider, or outbound action was executed for publication.",
+    "Use this directory's verify_github_checkpoint.py. The original checker expects the three historical PNGs and is retained unchanged."
+  ]
+}
