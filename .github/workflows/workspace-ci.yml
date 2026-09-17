@@ -1,0 +1,40 @@
+name: Leads workspace verification
+on:
+  push:
+    branches: [feat/ai-leads-workspace]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      ENABLE_OUTBOUND: 'false'
+      OPENAI_API_KEY: ''
+      TWILIO_AUTH_TOKEN: ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install test dependencies
+        run: python -m pip install -r requirements-dev.txt
+      - name: Run existing protections
+        run: python -m pytest -q | tee baseline-test-results.txt
+      - name: Package offline verification inputs
+        if: always()
+        run: |
+          mkdir -p verification-inputs/wheels
+          python -m pip download -r requirements-dev.txt -d verification-inputs/wheels
+          git archive --format=tar HEAD | gzip > verification-inputs/source.tar.gz
+          cp baseline-test-results.txt verification-inputs/ || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: relay-baseline-verification
+          path: verification-inputs/
+          retention-days: 3
