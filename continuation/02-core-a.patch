@@ -1,0 +1,197 @@
+diff --git a/CONTINUATION.md b/CONTINUATION.md
+index 48be32c4a8c3d47f17dfb90e5c9052d5a9ca6912..0d5fa18f17527d200f0de21f687ceaef5fe3bdb9 100644
+--- a/CONTINUATION.md
++++ b/CONTINUATION.md
+@@ -23,0 +24,12 @@ No changes to main or recovery, no force push, merge, deployment, outbound enabl
++
++## Milestone 2: backend integration (local checks complete; browser work pending)
++
++Implemented indexed Store capture and lazy transcript loading; nested-savepoint atomicity; separate workspace configuration; worker lifecycle; authenticated bounded APIs; source correction/redaction; protected revision ordering; resumed chunk extraction; strict provider-schema translation; practice-call timeline isolation; and the /leads application route. Voice provider event/tool contracts are retained.
++
++Actual local results after integration:
++- `python -m pytest tests -q`: 87 passed, one Starlette/AnyIO deprecation warning (5.07s). These are the existing regression tests, not the planned workspace acceptance suite.
++- `python -m compileall -q app`: passed.
++- Deterministic FixtureModel worker smoke: one durable assessment, two mocked model requests, succeeded job.
++- Authenticated HTTP smoke: bootstrap, query, aggregates, tasks, calls, lead detail and call detail returned 200; audited correction and redaction returned 200. No external model or provider calls.
++
++The reconstructed feature is NOT release-verified. Next: frontend style/package/build, full backend resilience and security tests, desktop/mobile browser verification, documentation and PR. Source is preserved through an ordinary UTF-8 reviewed git patch applied to the continuation branch by a branch-restricted workflow; the resulting files are native repository source, and no historical recovery transport is used. No force push or main/recovery changes.
+diff --git a/app/config.py b/app/config.py
+index 40bf6385587ff1edc5480ff6d6f9831845b6deda..8b889b523c59b14a75436e27f5e5c450b3d5d289 100644
+--- a/app/config.py
++++ b/app/config.py
+@@ -27,0 +28,12 @@ class Config:
++    workspace_enabled: bool = False
++    workspace_key: str = ''
++    workspace_model: str = ''
++    workspace_poll_seconds: float = 1.0
++    workspace_settle_seconds: float = 3.0
++    workspace_chunk_chars: int = 24000
++    workspace_max_chunks: int = 4
++    workspace_timeout: float = 45.0
++    workspace_output_tokens: int = 6000
++    workspace_daily_requests: int = 100
++    workspace_daily_tokens: int = 1500000
++    workspace_timezone: str = 'UTC'
+@@ -60 +72,22 @@ class Config:
+-            port=int(os.getenv('PORT', '8080')))
++            port=int(os.getenv('PORT', '8080')),
++            workspace_enabled=os.getenv('WORKSPACE_ENABLED', 'false').lower() == 'true',
++            workspace_key=os.getenv('WORKSPACE_API_KEY', '').strip(),
++            workspace_model=os.getenv('WORKSPACE_MODEL', '').strip(),
++            workspace_poll_seconds=float(os.getenv('WORKSPACE_POLL_SECONDS', '1')),
++            workspace_settle_seconds=float(os.getenv('WORKSPACE_SETTLE_SECONDS', '3')),
++            workspace_chunk_chars=int(os.getenv('WORKSPACE_CHUNK_CHARS', '24000')),
++            workspace_max_chunks=int(os.getenv('WORKSPACE_MAX_CHUNKS', '4')),
++            workspace_timeout=float(os.getenv('WORKSPACE_TIMEOUT', '45')),
++            workspace_output_tokens=int(os.getenv('WORKSPACE_OUTPUT_TOKENS', '6000')),
++            workspace_daily_requests=int(os.getenv('WORKSPACE_DAILY_REQUESTS', '100')),
++            workspace_daily_tokens=int(os.getenv('WORKSPACE_DAILY_TOKENS', '1500000')),
++            workspace_timezone=os.getenv('WORKSPACE_TIMEZONE', 'UTC'))
++        from zoneinfo import ZoneInfo
++        ZoneInfo(c.workspace_timezone)
++        for field_name, low, high in (
++            ('workspace_poll_seconds', 0.2, 30), ('workspace_settle_seconds', 1, 60),
++            ('workspace_chunk_chars', 4000, 48000), ('workspace_max_chunks', 1, 20),
++            ('workspace_timeout', 5, 120), ('workspace_output_tokens', 1000, 16000),
++            ('workspace_daily_requests', 1, 10000), ('workspace_daily_tokens', 10000, 100000000)):
++            if not low <= getattr(c, field_name) <= high:
++                raise ValueError(f'{field_name} must be {low}–{high}.')
+diff --git a/app/db.py b/app/db.py
+index e489d051dad6572db0b9f18a4eec6af32a6edf3d..f19e462a22a94216e6b9e972cd532643292057f2 100644
+--- a/app/db.py
++++ b/app/db.py
+@@ -9,0 +10,22 @@ def uid(prefix): return f'{prefix}_{uuid.uuid4().hex}'
++class AtomicConnection(sqlite3.Connection):
++    """Nested application transactions use savepoints; inner helpers never commit outer work.
++
++    Callers must hold Store.lock for every transaction. This is deliberately a
++    single-process connection, not a multi-worker database abstraction.
++    """
++    def __enter__(self):
++        stack = getattr(self, '_savepoints', [])
++        name = 'relay_' + uuid.uuid4().hex
++        self.execute('SAVEPOINT ' + name)
++        stack.append(name)
++        self._savepoints = stack
++        return self
++
++    def __exit__(self, typ, value, traceback):
++        name = self._savepoints.pop()
++        if typ is not None:
++            self.execute('ROLLBACK TO SAVEPOINT ' + name)
++        self.execute('RELEASE SAVEPOINT ' + name)
++        return False
++
++
+@@ -14 +36 @@ class Store:
+-        self.conn = sqlite3.connect(str(path), check_same_thread=False)
++        self.conn = sqlite3.connect(str(path), check_same_thread=False, factory=AtomicConnection)
+@@ -17,0 +40 @@ class Store:
++            PRAGMA secure_delete=ON;
+@@ -26,0 +50,3 @@ class Store:
++        from .workspace import migrations, presentation
++        migrations.migrate(self)
++        presentation.initialize(self)
+@@ -35 +61 @@ class Store:
+-    def all(self, table):
++    def all(self, table, *, include_transcript=False):
+@@ -38,2 +64,2 @@ class Store:
+-            return [json.loads(r[0]) for r in self.conn.execute(f'SELECT data FROM {table} ORDER BY rowid DESC')]
+-    def get(self, table, id):
++            return [self._hydrate(table, json.loads(r[0]), include_transcript) for r in self.conn.execute(f'SELECT data FROM {table} ORDER BY rowid DESC')]
++    def get(self, table, id, *, include_transcript=True):
+@@ -43 +69,8 @@ class Store:
+-            return json.loads(row[0]) if row else None
++            return self._hydrate(table, json.loads(row[0]), include_transcript) if row else None
++    def _hydrate(self, table, data, include_transcript):
++        if table == 'calls':
++            from .workspace import evidence
++            data['capture'] = evidence.metadata(self, data['id'])
++            data['transcript_fragments'] = data['capture']['segment_count']
++            data['transcript'] = evidence.segments(self, data['id'], limit=100000) if include_transcript else []
++        return data
+@@ -47 +80 @@ class Store:
+-            data = self.get(table, id)
++            data = self.get(table, id, include_transcript=False)
+@@ -48,0 +82,6 @@ class Store:
++            from .workspace import evidence
++            before = dict(data)
++            if table == 'calls' and 'transcript' in changes:
++                raise ValueError('Transcript replacement is forbidden; use audited segment correction.')
++            if table == 'leads' and 'phone' in changes and changes['phone'] != data['phone']:
++                raise ValueError('Telephone identity is immutable.')
+@@ -49,0 +89,5 @@ class Store:
++            if table == 'calls':
++                data.pop('capture', None)
++                data.pop('transcript_fragments', None)
++                data['transcript'] = []
++                data['transcript_storage'] = 'indexed_v1'
+@@ -51 +95,9 @@ class Store:
+-            return data
++            if table == 'calls' and any(before.get(k) != data.get(k) for k in
++                    ('status', 'ended_at', 'requests', 'outcome', 'summary', 'next_step')):
++                evidence.dirty_call(self, id)
++            elif table == 'leads' and any(before.get(k) != data.get(k) for k in
++                    ('notes', 'company', 'timezone')):
++                if before.get('notes') != data.get('notes'):
++                    self._legacy_note(id, data.get('notes', ''))
++                evidence.dirty_lead(self, id)
++            return self._hydrate(table, data, False)
+@@ -60,0 +113 @@ class Store:
++            self._legacy_note(data['id'], data.get('notes', ''))
+@@ -61,0 +115,9 @@ class Store:
++    def _legacy_note(self, lead_id, text):
++        # Keep legacy UI notes as explicit, unconfirmed human source revisions.
++        previous = self.conn.execute("SELECT id FROM ws_notes WHERE lead_id=? AND id LIKE 'legacy_note_%' AND active=1", (lead_id,)).fetchone()
++        if previous:
++            self.conn.execute('UPDATE ws_notes SET active=0 WHERE id=?', (previous['id'],))
++        if text and str(text).strip():
++            self.conn.execute('INSERT INTO ws_notes VALUES(?,?,?,?,?,?,?,?,1)',
++                (uid('legacy_note'), lead_id, 'note', 'unknown', str(text).strip(), 0, now_iso(), previous['id'] if previous else None))
++
+@@ -79 +141,2 @@ class Store:
+-                        transcript=[], outcome=None, summary='', next_step='', requests=[],
++                        lead_timezone=(self.get('leads', lead_id) or {}).get('timezone') if lead_id else None,
++                        transcript=[], transcript_storage='indexed_v1', outcome=None, summary='', next_step='', requests=[],
+@@ -88,9 +151,3 @@ class Store:
+-        with self.lock:
+-            c = self.get('calls', call_id)
+-            entries = c['transcript']
+-            if len(entries) >= 12000: return
+-            if event.get('event_id') and any(x.get('event_id') == event['event_id'] for x in entries[-100:]): return
+-            entries.append(dict(role='lead' if event['type'] == 'session.input_transcript.delta' else 'agent',
+-                text=event.get('delta', ''), start_ms=event.get('start_ms'), end_ms=event.get('end_ms'),
+-                event_id=event.get('event_id')))
+-            self.patch('calls', call_id, transcript=entries)
++        from .workspace.evidence import append
++        return append(self, call_id, event)
++
+@@ -103 +160,7 @@ class Store:
+-            self.conn.execute('INSERT OR IGNORE INTO tools VALUES (?,?)', (key, json.dumps(result)))
++            created = self.conn.execute('INSERT OR IGNORE INTO tools VALUES (?,?)', (key, json.dumps(result)))
++            if created.rowcount:
++                from .workspace.presentation import audit
++                call_id = key.split(':', 1)[0]
++                if self.conn.execute('SELECT 1 FROM calls WHERE id=?', (call_id,)).fetchone():
++                    audit(self, 'voice', 'tool_result', call_id, 'Call tool result recorded.',
++                          {'tool_key': key, 'result': result})
+diff --git a/app/live.py b/app/live.py
+index ae57d4300f9b471f4ef5d12dcc631e159d6d03b6..aecf47d358f7b0b71675e6489539bf6abc122911 100644
+--- a/app/live.py
++++ b/app/live.py
+@@ -158 +158,3 @@ async def run_bridge(config: Config, store: Store, call_id: str,
+-    call = store.get('calls', call_id)
++    from .workspace import evidence
++    evidence.flag(store, call_id, None, bridge_active=True)
++    call = store.get('calls', call_id, include_transcript=False)
+@@ -177,2 +179,4 @@ async def run_bridge(config: Config, store: Store, call_id: str,
+-                    if eid and eid in seen: continue
+-                    if eid: seen.add(eid)
++                    transcript_event = kind in ('session.input_transcript.delta', 'session.output_transcript.delta')
++                    if not transcript_event:
++                        if eid and eid in seen: continue
++                        if eid: seen.add(eid)
+@@ -203,0 +208 @@ async def run_bridge(config: Config, store: Store, call_id: str,
++                        evidence.flag(store, call_id, None, close_observed=True)
+@@ -253,0 +259 @@ async def run_bridge(config: Config, store: Store, call_id: str,
++        evidence.flag(store, call_id, None if finalized.is_set() else 'bridge_ended_without_close', bridge_active=False)
