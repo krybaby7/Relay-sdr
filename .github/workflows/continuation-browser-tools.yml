@@ -1,0 +1,33 @@
+name: Continuation browser tools
+on:
+  push:
+    branches: [feat/ai-leads-workspace-continue]
+    paths: [.github/workflows/continuation-browser-tools.yml]
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install exact pinned headless browser for isolated local testing
+        run: |
+          mkdir -p /tmp/relay-browser
+          cp recovery/ai-leads-workspace-v2/recovered-dependency-manifests/package*.json /tmp/relay-browser/
+          cd /tmp/relay-browser
+          npm ci
+          npx playwright install --with-deps --only-shell chromium
+          tar -czf /tmp/browser-tooling.tar.gz -C "$HOME/.cache" ms-playwright
+          sha256sum /tmp/browser-tooling.tar.gz > /tmp/browser-tooling.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: continuation-browser-tooling
+          path: /tmp/browser-tooling.*
+          retention-days: 3
+          compression-level: 0
