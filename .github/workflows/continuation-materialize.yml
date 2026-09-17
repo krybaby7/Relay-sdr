@@ -1,0 +1,70 @@
+name: Materialize continuation integration
+on:
+  push:
+    branches: [feat/ai-leads-workspace-continue]
+    paths: [.github/workflows/continuation-materialize.yml]
+permissions:
+  contents: read
+concurrency:
+  group: relay-continuation-materialize
+  cancel-in-progress: false
+jobs:
+  materialize:
+    if: github.ref == 'refs/heads/feat/ai-leads-workspace-continue'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      ENABLE_OUTBOUND: 'false'
+      OPENAI_API_KEY: ''
+      WORKSPACE_API_KEY: ''
+      TWILIO_AUTH_TOKEN: ''
+      LANGSMITH_TRACING: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Apply reviewed UTF-8 source changes and verify exact blobs
+        run: |
+          git apply --unidiff-zero --index continuation/02-core-a.patch continuation/02-core-b.patch continuation/02-core-c.patch
+          python - <<'PY'
+          import re, subprocess
+          from pathlib import Path
+          for path in sorted(Path('continuation').glob('02-core-*.patch')):
+              for section in path.read_text().split('diff --git ')[1:]:
+                  name = section.splitlines()[0].split(' b/', 1)[1]
+                  expected = re.search(r'^index [0-9a-f]{40}\.\.([0-9a-f]{40})', section, re.M)[1]
+                  actual = subprocess.check_output(['git', 'hash-object', name], text=True).strip()
+                  assert actual == expected, (name, expected, actual)
+                  print('Verified source blob:', name, actual)
+          for name, expected in {
+              'app/workspace/routes.py': 'afb6d68b9f6dedf1daf8d029c896ddd132326a07',
+              'app/workspace/redaction.py': '3fa67d2fe50685093f9655d5b3e2aa3704422030',
+          }.items():
+              assert subprocess.check_output(['git','hash-object',name], text=True).strip() == expected, name
+          PY
+          git diff --cached --exit-code -- recovery/ RECOVERY-START-HERE.md
+          python recovery/ai-leads-workspace-v2/verify_github_checkpoint.py
+      - name: Fresh integrated baseline tests
+        run: |
+          set -o pipefail
+          python -m pip install -r requirements-dev.txt
+          python -m compileall -q app
+          python -m pytest tests -q | tee /tmp/relay-integrated-baseline.txt
+      - name: Fast-forward native source checkpoint on this branch only
+        env:
+          SOURCE_TOKEN: ${{ github.token }}
+        run: |
+          test "$GITHUB_REF" = 'refs/heads/feat/ai-leads-workspace-continue'
+          git config user.name 'Relay continuation verification'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          printf '\nFresh isolated verification: `python -m compileall -q app` and `python -m pytest tests -q` passed in Actions run %s, on the exact reconstructed source blobs verified above. This is regression verification, not full workspace or browser acceptance.\n' "$GITHUB_RUN_ID" >> CONTINUATION.md
+          git add CONTINUATION.md
+          git diff --cached --name-only
+          git commit -m 'feat: integrate recovered workspace with authenticated API and durable capture worker'
+          AUTH=$(printf 'x-access-token:%s' "$SOURCE_TOKEN" | base64 -w0)
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $AUTH" push origin HEAD:refs/heads/feat/ai-leads-workspace-continue
