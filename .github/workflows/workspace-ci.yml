@@ -30,18 +30,20 @@ jobs:
           set -o pipefail
           python -m pip install -r requirements-dev.txt
           python -m pytest -q | tee baseline-test-results.txt
-      - name: Resolve workspace toolchain
+      - name: Resolve patched workspace toolchain
         run: |
           mkdir -p verification-inputs/wheels verification-inputs/frontend
           python -m pip download -r requirements-dev.txt langgraph==1.2.11 langgraph-checkpoint-sqlite==3.1.1 ruff -d verification-inputs/wheels
-          python -m pip install langgraph==1.2.11 langgraph-checkpoint-sqlite==3.1.1 ruff
+          python -m pip install langgraph==1.2.11 langgraph-checkpoint-sqlite==3.1.1 ruff pip-audit
           python -m pip freeze > verification-inputs/python-resolved.txt
+          python -m pip_audit --format=json --output=verification-inputs/python-audit.json || true
           cd verification-inputs/frontend
           npm init -y
+          npm pkg set 'overrides.esbuild=0.28.1'
           npm install --save-exact react@19.2.3 react-dom@19.2.3 @json-render/core@0.20.0 @json-render/react@0.20.0 react-grid-layout@2.2.4 zod@4.3.6
-          npm install --save-dev --save-exact typescript@5.9.3 vite@7.3.1 @types/react@19.2.14 @types/react-dom@19.2.3 eslint@9.39.2 typescript-eslint@8.55.0 @eslint/js@9.39.2 globals@17.3.0 @playwright/test@1.62.0
+          npm install --save-dev --save-exact typescript@5.9.3 vite@7.3.6 @types/react@19.2.14 @types/react-dom@19.2.3 eslint@9.39.2 typescript-eslint@8.55.0 @eslint/js@9.39.2 globals@17.3.0 @playwright/test@1.62.0
           npm ls --all --json > dependency-tree.json
-          npm audit --json > audit.json || true
+          npm audit --json > audit.json
           tar -czf ../frontend-toolchain.tar.gz .
           cd ../..
           rm -rf verification-inputs/frontend
@@ -50,6 +52,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: relay-workspace-toolchain
+          name: relay-patched-toolchain
           path: verification-inputs/
           retention-days: 3
