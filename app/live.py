@@ -155,7 +155,9 @@ async def run_bridge(config: Config, store: Store, call_id: str,
     emit: Callable[[dict], Awaitable[None]], stop: asyncio.Event,
     *, connector=connect):
     """receive_audio returns audio/control messages; emit receives safe events, never full prompts/keys."""
-    call = store.get('calls', call_id)
+    from .workspace import evidence
+    evidence.flag(store, call_id, None, bridge_active=True)
+    call = store.get('calls', call_id, include_transcript=False)
     lead = store.get('leads', call['lead_id']) if call['lead_id'] else None
     book = call.get('playbook_snapshot') or store.get_setting('playbook')
     runner = ToolRunner(store, call_id); processor = EventProcessor(runner)
@@ -174,8 +176,10 @@ async def run_bridge(config: Config, store: Store, call_id: str,
                 async for raw in upstream:
                     event = json.loads(raw); kind = event.get('type')
                     eid = event.get('event_id')
-                    if eid and eid in seen: continue
-                    if eid: seen.add(eid)
+                    transcript_event = kind in ('session.input_transcript.delta', 'session.output_transcript.delta')
+                    if not transcript_event:
+                        if eid and eid in seen: continue
+                        if eid: seen.add(eid)
                     if kind == 'session.started':
                         if ready.is_set(): continue
                         current_call = store.get('calls', call_id)
@@ -201,6 +205,7 @@ async def run_bridge(config: Config, store: Store, call_id: str,
                             # Grace period for goodbye only; this is not inferred speech completion.
                             finish_timer = asyncio.get_running_loop().call_later(2.5, stop.set)
                     elif kind == 'session.closed':
+                        evidence.flag(store, call_id, None, close_observed=True)
                         store.patch('calls', call_id, usage=event.get('usage'), usage_finalized=True)
                         finalized.set(); return
                     elif kind == 'error':
@@ -251,6 +256,7 @@ async def run_bridge(config: Config, store: Store, call_id: str,
         for task in tasks:
             if not task.done(): task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
+        evidence.flag(store, call_id, None if finalized.is_set() else 'bridge_ended_without_close', bridge_active=False)
         latest = store.get('calls', call_id)
         # Phone completion is owned by the provider callback, not by audio disconnection.
         if latest['kind'] != 'twilio':

@@ -136,6 +136,10 @@ def compute_assessment(claims, notes, rubric, *, usable_calls, coverage, previou
     if not coverage['transcript_certified_complete']:
         unknowns.append('Capture is not a certified complete transcript of everything spoken')
     yes_topics = {c['topic'] for c in claims if c['value'] == 'yes' and c['interpretation'] == 'explicit'}
+    for topic in RUBRIC_TOPICS:
+        yes_topics.discard(topic)
+        if criteria[topic]['value'] == 'yes':
+            yes_topics.add(topic)
     stage = 'unassessed' if not claims else ('proposal' if 'proposal' in yes_topics else
              'decision' if 'decision_needed' in yes_topics else 'engaged' if 'intent' in yes_topics else 'qualification')
     return {'potential': potential, 'evidence_points': points, 'points_label': 'Rubric evidence points, not win probability',
@@ -158,8 +162,9 @@ def eligibility(store, lead):
     return 'permission_recorded'  # NOT a preflight result or authorization to dial.
 
 
-def priority(tasks, eligible, assessment, *, now=None):
+def priority(tasks, eligible, assessment, *, now=None, zone="UTC"):
     now = now or datetime.now(timezone.utc)
+    tz = ZoneInfo(zone)
     active = [t for t in tasks if t['status'] in OPEN_TASKS]
     actionable = [t for t in active if t['kind'] != 'callback' or eligible == 'permission_recorded']
     overdue, today, future = [], [], []
@@ -168,14 +173,14 @@ def priority(tasks, eligible, assessment, *, now=None):
             due = datetime.fromisoformat(task['due_at'])
             if due < now:
                 overdue.append(task)
-            elif due.date() == now.date():
+            elif due.astimezone(tz).date() == now.astimezone(tz).date():
                 today.append(task)
             else:
                 future.append(task)
     if overdue:
         return 'overdue', 'A recorded internal commitment is overdue; no outreach has been performed.'
     if today:
-        return 'today', 'A recorded internal commitment is due today (UTC display reference).'
+        return 'today', 'A recorded internal commitment is due today in the workspace timezone.'
     if assessment and (assessment.get('conflicts') or assessment.get('needs_decision')):
         return 'review', 'A human decision or evidence conflict needs review.'
     if any(t['status'] in ('needs_review', 'proposed') for t in actionable):

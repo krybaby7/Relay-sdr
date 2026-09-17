@@ -21,3 +21,17 @@ Reconstruct missing workspace router, Store/config/live lifecycle hooks, fronten
 ## Boundaries
 
 No changes to main or recovery, no force push, merge, deployment, outbound enablement, recording changes, real data or secrets. Preserve authentication, consent, suppression, calling policy, signed callbacks, unknown-call reconciliation and practice isolation. Continue autonomously through implementation and verification.
+
+## Milestone 2: backend integration (local checks complete; browser work pending)
+
+Implemented indexed Store capture and lazy transcript loading; nested-savepoint atomicity; separate workspace configuration; worker lifecycle; authenticated bounded APIs; source correction/redaction; protected revision ordering; resumed chunk extraction; strict provider-schema translation; practice-call timeline isolation; and the /leads application route. Voice provider event/tool contracts are retained.
+
+Actual local results after integration:
+- `python -m pytest tests -q`: 87 passed, one Starlette/AnyIO deprecation warning (5.07s). These are the existing regression tests, not the planned workspace acceptance suite.
+- `python -m compileall -q app`: passed.
+- Deterministic FixtureModel worker smoke: one durable assessment, two mocked model requests, succeeded job.
+- Authenticated HTTP smoke: bootstrap, query, aggregates, tasks, calls, lead detail and call detail returned 200; audited correction and redaction returned 200. No external model or provider calls.
+
+The reconstructed feature is NOT release-verified. Next: frontend style/package/build, full backend resilience and security tests, desktop/mobile browser verification, documentation and PR. Source is preserved through an ordinary UTF-8 reviewed git patch applied to the continuation branch by a branch-restricted workflow; the resulting files are native repository source, and no historical recovery transport is used. No force push or main/recovery changes.
+
+Fresh isolated verification: `python -m compileall -q app` and `python -m pytest tests -q` passed in Actions run 35278025146, on the exact reconstructed source blobs verified above. This is regression verification, not full workspace or browser acceptance.

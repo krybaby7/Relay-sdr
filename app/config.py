@@ -25,6 +25,18 @@ class Config:
     outcome_url: str = ''
     outcome_secret: str = ''
     port: int = 8080
+    workspace_enabled: bool = False
+    workspace_key: str = ''
+    workspace_model: str = ''
+    workspace_poll_seconds: float = 1.0
+    workspace_settle_seconds: float = 3.0
+    workspace_chunk_chars: int = 24000
+    workspace_max_chunks: int = 4
+    workspace_timeout: float = 45.0
+    workspace_output_tokens: int = 6000
+    workspace_daily_requests: int = 100
+    workspace_daily_tokens: int = 1500000
+    workspace_timezone: str = 'UTC'
 
     @classmethod
     def from_env(cls) -> 'Config':
@@ -57,7 +69,28 @@ class Config:
             inbound_token=os.getenv('INBOUND_LEAD_TOKEN', ''),
             outcome_url=os.getenv('OUTCOME_WEBHOOK_URL', ''),
             outcome_secret=os.getenv('OUTCOME_WEBHOOK_SECRET', ''),
-            port=int(os.getenv('PORT', '8080')))
+            port=int(os.getenv('PORT', '8080')),
+            workspace_enabled=os.getenv('WORKSPACE_ENABLED', 'false').lower() == 'true',
+            workspace_key=os.getenv('WORKSPACE_API_KEY', '').strip(),
+            workspace_model=os.getenv('WORKSPACE_MODEL', '').strip(),
+            workspace_poll_seconds=float(os.getenv('WORKSPACE_POLL_SECONDS', '1')),
+            workspace_settle_seconds=float(os.getenv('WORKSPACE_SETTLE_SECONDS', '3')),
+            workspace_chunk_chars=int(os.getenv('WORKSPACE_CHUNK_CHARS', '24000')),
+            workspace_max_chunks=int(os.getenv('WORKSPACE_MAX_CHUNKS', '4')),
+            workspace_timeout=float(os.getenv('WORKSPACE_TIMEOUT', '45')),
+            workspace_output_tokens=int(os.getenv('WORKSPACE_OUTPUT_TOKENS', '6000')),
+            workspace_daily_requests=int(os.getenv('WORKSPACE_DAILY_REQUESTS', '100')),
+            workspace_daily_tokens=int(os.getenv('WORKSPACE_DAILY_TOKENS', '1500000')),
+            workspace_timezone=os.getenv('WORKSPACE_TIMEZONE', 'UTC'))
+        from zoneinfo import ZoneInfo
+        ZoneInfo(c.workspace_timezone)
+        for field_name, low, high in (
+            ('workspace_poll_seconds', 0.2, 30), ('workspace_settle_seconds', 1, 60),
+            ('workspace_chunk_chars', 4000, 48000), ('workspace_max_chunks', 1, 20),
+            ('workspace_timeout', 5, 120), ('workspace_output_tokens', 1000, 16000),
+            ('workspace_daily_requests', 1, 10000), ('workspace_daily_tokens', 10000, 100000000)):
+            if not low <= getattr(c, field_name) <= high:
+                raise ValueError(f'{field_name} must be {low}–{high}.')
         if not 30 <= c.max_seconds <= 600: raise ValueError('MAX_CALL_SECONDS must be 30–600.')
         if not 1 <= c.max_daily <= 100: raise ValueError('MAX_DAILY_CALLS must be 1–100 for this pilot.')
         if not 1 <= c.max_concurrent <= 5: raise ValueError('MAX_CONCURRENT_CALLS must be 1–5.')

@@ -45,10 +45,14 @@ class BodyLimit:
             return await receive()
         await self.app(scope, replay, send)
 
-def create_app(config: Config | None = None, *, provider=None):
+def create_app(config: Config | None = None, *, provider=None, workspace_model=None):
     c = config or Config.from_env()
     c.data_dir.mkdir(parents=True, exist_ok=True)
     store = Store(c.data_dir / 'relay.sqlite3')
+    from .workspace.worker import WorkspaceWorker
+    from .workspace.routes import router as workspace_router
+    store.setting('ws_timezone', c.workspace_timezone)
+    workspace = WorkspaceWorker(store, c, model=workspace_model)
     twilio = provider or Twilio(c)
     sessions: dict[str, asyncio.Event] = {}
     tickets: dict[str, dict] = {}; media_tokens: dict[str, dict] = {}
@@ -76,22 +80,29 @@ def create_app(config: Config | None = None, *, provider=None):
 
     @asynccontextmanager
     async def lifespan(app):
-        yield
-        for stop in sessions.values(): stop.set()
-        # Sleeping expiry watchdogs are not work to finish during shutdown.
-        for task in list(timers): task.cancel()
-        if timers: await asyncio.gather(*list(timers), return_exceptions=True)
-        active_phone = [x for x in store.all('calls') if x['kind'] == 'twilio' and x['status'] in ACTIVE]
-        if active_phone:
-            with contextlib.suppress(asyncio.TimeoutError):
-                await asyncio.wait_for(asyncio.gather(*(stop_phone(x['id']) for x in active_phone)), 16)
-        if tasks:
-            done, pending = await asyncio.wait(list(tasks), timeout=12)
-            for task in pending: task.cancel()
-            await asyncio.gather(*pending, return_exceptions=True)
-        store.close()
+        workspace_task = asyncio.create_task(workspace.loop())
+        try:
+            yield
+        finally:
+            workspace.stop()
+            for stop in sessions.values(): stop.set()
+            # Sleeping expiry watchdogs are not work to finish during shutdown.
+            for task in list(timers): task.cancel()
+            if timers: await asyncio.gather(*list(timers), return_exceptions=True)
+            active_phone = [x for x in store.all('calls') if x['kind'] == 'twilio' and x['status'] in ACTIVE]
+            if active_phone:
+                with contextlib.suppress(asyncio.TimeoutError):
+                    await asyncio.wait_for(asyncio.gather(*(stop_phone(x['id']) for x in active_phone)), 16)
+            if tasks:
+                done, pending = await asyncio.wait(list(tasks), timeout=12)
+                for task in pending: task.cancel()
+                await asyncio.gather(*pending, return_exceptions=True)
+            await workspace_task
+            workspace.close()
+            store.close()
 
     app = FastAPI(title='Relay SDR', version='0.1.0', lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+    app.state.workspace = workspace
     app.state.store = store; app.state.config = c; app.state.sessions = sessions; app.state.tickets = tickets
     app.add_middleware(BodyLimit)
     hosts = {'localhost', '127.0.0.1'}
@@ -187,7 +198,7 @@ def create_app(config: Config | None = None, *, provider=None):
     async def state():
         leads = store.all('leads'); calls = store.all('calls')
         # Transcripts are fetched only on demand; the dashboard has no invented activity.
-        overview = [{k: v for k, v in item.items() if k != 'transcript'} | {'transcript_fragments': len(item['transcript'])} for item in calls]
+        overview = [{k: v for k, v in item.items() if k != 'transcript'} | {'transcript_fragments': item['transcript_fragments']} for item in calls]
         return dict(leads=leads, calls=overview, playbook=store.get_setting('playbook'),
             connectors=c.connectors(), outbox=store.all('outbox'),
             config={'outbound_enabled': c.enable_outbound, 'max_seconds': c.max_seconds, 'max_daily': c.max_daily,
@@ -505,6 +516,15 @@ def create_app(config: Config | None = None, *, provider=None):
                 latest = get('calls', id)
                 if latest['status'] in PROVIDER_TERMINAL: store.enqueue(latest)
             with contextlib.suppress(Exception): await ws.close()
+
+    app.include_router(workspace_router(store, workspace, admin))
+
+    @app.get('/leads')
+    async def leads_workspace():
+        page = WEB / 'workspace' / 'index.html'
+        if not page.is_file():
+            return JSONResponse({'detail': 'Workspace frontend is not built. Run: cd frontend && npm ci && npm run build'}, status_code=503)
+        return FileResponse(page)
 
     app.mount('/assets', StaticFiles(directory=WEB), name='assets')
     @app.get('/')

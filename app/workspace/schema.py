@@ -145,6 +145,9 @@ class Workspace(Closed):
         all_view = next(v for v in self.views if v.id == 'all')
         if all_view.query.filters or all_view.query.search or all_view.query.scope != 'real':
             raise ValueError('All leads must remain unfiltered; duplicate it to filter.')
+        practice = next(v for v in self.views if v.id == 'practice')
+        if practice.query.scope != 'practice':
+            raise ValueError('Practice navigation must remain isolated from real leads.')
         return self
 
 
@@ -264,7 +267,7 @@ class Extraction(Closed):
     conversation: bool
     claims: Annotated[list[Claim], Field(max_length=40)]
     commitments: Annotated[list[Commitment], Field(max_length=15)]
-    questions: Annotated[list[str], Field(max_length=20)]
+    questions: Annotated[list[Annotated[str, Field(max_length=500)]], Field(max_length=20)]
 
 
 def default_workspace() -> Workspace:

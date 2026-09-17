@@ -65,13 +65,15 @@ def flag(store, call_id, name, **changes):
         allowed = {'bridge_active', 'close_observed'}
         if set(changes) - allowed:
             raise ValueError('Unsupported capture change.')
+        if flags == set(row['flags']) and all(int(row[k]) == int(v) for k, v in changes.items()):
+            return
         parts = ['flags=?', 'last_event=?'] + [f'{k}=?' for k in changes]
         values = [json.dumps(sorted(flags)), time.time()] + [int(v) for v in changes.values()]
         store.conn.execute(f'UPDATE ws_capture SET {",".join(parts)} WHERE call_id=?', (*values, call_id))
         dirty_call(store, call_id)
 
 
-def append(store, call_id, event, *, max_segments=MAX_SEGMENTS, max_bytes=MAX_BYTES):
+def append(store, call_id, event, *, max_segments=MAX_SEGMENTS, max_bytes=MAX_BYTES, human=False):
     text = event.get('delta', '')
     if not isinstance(text, str):
         raise ValueError('Transcript delta must be text.')
@@ -85,6 +87,8 @@ def append(store, call_id, event, *, max_segments=MAX_SEGMENTS, max_bytes=MAX_BY
         cap = metadata(store, call_id)
         if not cap:
             raise KeyError(call_id)
+        if eid and store.conn.execute('SELECT 1 FROM ws_redactions WHERE call_id=? AND event_id=?', (call_id, eid)).fetchone():
+            return None
         if eid and store.conn.execute('SELECT 1 FROM ws_segments WHERE call_id=? AND event_id=? AND content_hash=?',
                                       (call_id, eid, digest)).fetchone():
             return None
@@ -104,16 +108,23 @@ def append(store, call_id, event, *, max_segments=MAX_SEGMENTS, max_bytes=MAX_BY
         if all(v is not None for v in timing) and timing[1] < timing[0]:
             timing = [None, None]
             flags.add('timing_missing_or_invalid')
-        previous = store.conn.execute('SELECT id FROM ws_segments WHERE call_id=? AND event_id=? AND active=1',
+        previous = store.conn.execute('SELECT id,source_order FROM ws_segments WHERE call_id=? AND event_id=? AND active=1',
                                       (call_id, eid)).fetchone() if eid else None
+        protected = bool(eid and not human and store.conn.execute('SELECT 1 FROM ws_source_overrides WHERE call_id=? AND event_id=?', (call_id, eid)).fetchone())
+        if protected:
+            flags.add('provider_revision_conflicts_with_human_correction')
         supersedes = previous['id'] if previous else None
-        if previous:
+        if previous and not protected:
             store.conn.execute('UPDATE ws_segments SET active=0 WHERE id=?', (supersedes,))
             flags.add('revised_source_events')
         ident = uid('seg')
-        store.conn.execute('INSERT INTO ws_segments VALUES(?,?,?,?,?,?,?,?,?,?,?,?,1,0)',
+        store.conn.execute('INSERT INTO ws_segments(id,call_id,seq,event_id,content_hash,role,text,start_ms,end_ms,received_at,raw,supersedes,active,redacted,source_order) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,1,0,?)',
                            (ident, call_id, cap['segment_count'] + 1, eid, digest, role, text, *timing,
-                            now_iso(), json.dumps(raw), supersedes))
+                            now_iso(), json.dumps(raw), supersedes, previous['source_order'] if previous else cap['segment_count'] + 1))
+        if protected:
+            store.conn.execute('UPDATE ws_segments SET active=0 WHERE id=?', (ident,))
+        if human and eid:
+            store.conn.execute('INSERT OR IGNORE INTO ws_source_overrides VALUES(?,?)', (call_id, eid))
         store.conn.execute('UPDATE ws_capture SET revision=revision+1,segment_count=segment_count+1,'
                            'byte_count=byte_count+?,last_event=?,flags=? WHERE call_id=?',
                            (len(text.encode()), time.time(), json.dumps(sorted(flags)), call_id))
@@ -122,10 +133,12 @@ def append(store, call_id, event, *, max_segments=MAX_SEGMENTS, max_bytes=MAX_BY
 
 
 def segments(store, call_id, *, offset=0, limit=200, include_replaced=False):
+    if not 0 <= offset <= 100000 or not 1 <= limit <= 100000:
+        raise ValueError('Invalid segment range.')
     active = '' if include_replaced else 'AND active=1'
     rows = store.conn.execute(f'SELECT id,call_id,seq,event_id,role,text,start_ms,end_ms,received_at,'
                              f'supersedes,active,redacted FROM ws_segments WHERE call_id=? {active} '
-                             'ORDER BY seq LIMIT ? OFFSET ?', (call_id, limit, offset)).fetchall()
+                             'ORDER BY source_order,seq LIMIT ? OFFSET ?', (call_id, limit, offset)).fetchall()
     return [dict(r) for r in rows]
 
 
@@ -137,7 +150,7 @@ def readable_sources(store, call_id, *, max_chars=24000):
     """
     groups, current, length = [], None, 0
     rows = store.conn.execute('SELECT id,role,text,start_ms,end_ms FROM ws_segments '
-                             'WHERE call_id=? AND active=1 AND redacted=0 ORDER BY seq', (call_id,))
+                             'WHERE call_id=? AND active=1 AND redacted=0 ORDER BY source_order,seq', (call_id,))
     for row in rows:
         text = row['text']
         for start in range(0, max(len(text), 1), 4000):
@@ -172,6 +185,9 @@ def resolve_reference(ref, sources, *, lead_id, store):
     if not source or ref['quote'] not in source['text']:
         raise ValueError('Evidence quote does not match the supplied source.')
     if source.get('note_id'):
+        note = store.conn.execute('SELECT lead_id,active,text FROM ws_notes WHERE id=?', (source['note_id'],)).fetchone()
+        if not note or note['lead_id'] != lead_id or not note['active'] or ref['quote'] not in note['text']:
+            raise ValueError('Note reference is stale or belongs to a different lead.')
         return {'note_id': source['note_id'], 'quote': ref['quote'], 'call_id': None,
                 'segment_id': None, 'spans': [], 'source_time': None, 'interpretation': 'human_note'}
     row = store.conn.execute('SELECT lead_id,kind FROM ws_call_index WHERE call_id=?', (source['call_id'],)).fetchone()
@@ -188,5 +204,9 @@ def resolve_reference(ref, sources, *, lead_id, store):
                           'end': span['segment_start'] + hi - span['group_start']})
     if not spans:
         raise ValueError('Empty evidence span.')
+    for span in spans:
+        saved = store.conn.execute('SELECT text,call_id,active,redacted FROM ws_segments WHERE id=?', (span['segment_id'],)).fetchone()
+        if not saved or saved['call_id'] != source['call_id'] or not saved['active'] or saved['redacted'] or span['end'] > len(saved['text']):
+            raise ValueError('Evidence source is stale or unavailable.')
     return {'call_id': source['call_id'], 'segment_id': spans[0]['segment_id'], 'spans': spans,
             'quote': ref['quote'], 'source_time': source.get('start_ms'), 'interpretation': 'source_quote'}

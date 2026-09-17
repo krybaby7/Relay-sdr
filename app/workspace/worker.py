@@ -31,6 +31,10 @@ class BudgetExceeded(RuntimeError):
     pass
 
 
+class ChunkContinuation(RuntimeError):
+    """A bounded slice finished; continue cached extraction in a later tick."""
+
+
 class Stopping(RuntimeError):
     pass
 
@@ -58,6 +62,8 @@ class WorkspaceWorker:
         self.model = model or ResponsesModel(config)
         self.stop_event = threading.Event()
         self.running = False
+        self.wake = asyncio.Event()
+        self.loop_handle = None
         self.checkpoint_connection = sqlite3.connect(str(config.data_dir / 'workspace-checkpoints.sqlite3'),
                                                      check_same_thread=False)
         self.checkpoint_connection.execute('PRAGMA journal_mode=WAL')
@@ -74,9 +80,13 @@ class WorkspaceWorker:
         graph.add_edge(previous, END)
         self.graph = graph.compile(checkpointer=saver)
         self.saver = saver
+        self.tick_lock = threading.Lock()
+        self.checkpoint_connection.execute('PRAGMA secure_delete=ON')
         with store.lock, store.conn:
             store.conn.execute("UPDATE ws_jobs SET status='queued',available_at=?,updated_at=? WHERE status='running'",
                                (time.time(), now_iso()))
+            if self.model.available:
+                store.conn.execute("UPDATE ws_jobs SET status='queued',available_at=? WHERE status='waiting_configuration'", (time.time(),))
             for row in store.conn.execute('SELECT call_id FROM ws_capture WHERE bridge_active=1').fetchall():
                 evidence.flag(store, row['call_id'], 'server_restart_during_capture', bridge_active=False)
 
@@ -91,6 +101,7 @@ class WorkspaceWorker:
 
     async def loop(self):
         self.running = True
+        self.loop_handle = asyncio.get_running_loop()
         try:
             while not self.stop_event.is_set():
                 try:
@@ -99,12 +110,19 @@ class WorkspaceWorker:
                     with self.store.lock, self.store.conn:
                         presentation.audit(self.store, 'system', 'worker_error', None,
                                            f'Workspace worker iteration failed ({type(exc).__name__}); retrying.')
-                await asyncio.sleep(self.config.workspace_poll_seconds)
+                if not self.stop_event.is_set():
+                    try:
+                        await asyncio.wait_for(self.wake.wait(), timeout=self.config.workspace_poll_seconds)
+                    except asyncio.TimeoutError:
+                        pass
+                    self.wake.clear()
         finally:
             self.running = False
 
     def stop(self):
         self.stop_event.set()
+        if self.loop_handle and not self.loop_handle.is_closed():
+            self.loop_handle.call_soon_threadsafe(self.wake.set)
 
     def close(self):
         self.checkpoint_connection.close()
@@ -138,7 +156,7 @@ class WorkspaceWorker:
             rows = self.store.conn.execute('''SELECT h.* FROM ws_heads h JOIN ws_lead_index l ON l.lead_id=h.lead_id
               WHERE l.sample=0 AND h.generation>h.assessed_generation AND h.changed_at<?
               AND NOT EXISTS(SELECT 1 FROM ws_call_index c JOIN ws_capture cap ON c.call_id=cap.call_id
-                WHERE c.lead_id=h.lead_id AND (cap.bridge_active=1 OR cap.last_event>?))
+                WHERE c.lead_id=h.lead_id AND c.kind='twilio' AND (cap.bridge_active=1 OR cap.last_event>?))
               ORDER BY h.changed_at LIMIT 20''', (now - self.config.workspace_settle_seconds,
                                                  now - self.config.workspace_settle_seconds)).fetchall()
             rubric = self.store.get_setting('ws_rubric')
@@ -147,6 +165,25 @@ class WorkspaceWorker:
                 self._enqueue('analysis', row['lead_id'], row['generation'], dedupe, {})
 
     def tick(self):
+        # Only one graph invocation/checkpoint writer even in test/admin callers.
+        if not self.tick_lock.acquire(blocking=False):
+            return False
+        try:
+            self.cleanup_checkpoints()
+            return self._tick()
+        finally:
+            self.cleanup_checkpoints()
+            self.tick_lock.release()
+
+    def cleanup_checkpoints(self):
+        with self.store.lock:
+            ids = [r['job_id'] for r in self.store.conn.execute('SELECT job_id FROM ws_checkpoint_purge LIMIT 100')]
+        for ident in ids:
+            self.saver.delete_thread(ident)
+            with self.store.lock, self.store.conn:
+                self.store.conn.execute('DELETE FROM ws_checkpoint_purge WHERE job_id=?', (ident,))
+
+    def _tick(self):
         if self.stop_event.is_set() or not self.config.workspace_enabled or self.store.get_setting('ws_paused'):
             return False
         self.scan()
@@ -170,6 +207,11 @@ class WorkspaceWorker:
             input_state = None if snapshot.next else {'job_id': job['id'], 'phase': 'queued'}
             self.graph.invoke(input_state, config)
             self._finish(job, 'succeeded')
+        except ChunkContinuation:
+            with self.store.lock, self.store.conn:
+                self.store.conn.execute('UPDATE ws_jobs SET attempts=max(0,attempts-1) WHERE id=?', (job['id'],))
+            self._finish(job, 'retry', error='Bounded extraction slice saved; continuing remaining source chunks.',
+                         available_at=time.time() + self.config.workspace_poll_seconds)
         except StaleRun:
             self._finish(job, 'superseded', error='Newer evidence, corrections, or rubric superseded this run.')
         except presentation.Conflict:
@@ -196,6 +238,9 @@ class WorkspaceWorker:
             if job['lead_id'] and status in ('failed', 'waiting_configuration'):
                 self.store.conn.execute('UPDATE ws_heads SET status=? WHERE lead_id=? AND generation=?',
                                         (status, job['lead_id'], job['generation']))
+            if status in ('succeeded', 'superseded'):
+                self.store.conn.execute('DELETE FROM ws_drafts WHERE job_id=?', (job['id'],))
+                self.store.conn.execute('INSERT OR IGNORE INTO ws_checkpoint_purge VALUES(?)', (job['id'],))
             presentation.audit(self.store, 'system', 'job', job['lead_id'] or job['id'],
                                error or f'Workspace {job["kind"]} run {status}.', {'job_id': job['id'], 'status': status})
 
@@ -204,6 +249,8 @@ class WorkspaceWorker:
             raise Stopping()
         with self.store.lock:
             row = self.store.conn.execute('SELECT * FROM ws_jobs WHERE id=?', (state['job_id'],)).fetchone()
+            if not row or row['status'] == 'superseded':
+                raise StaleRun()
             result = dict(row)
             result['payload'] = json.loads(result['payload'])
             if result['lead_id']:
@@ -222,6 +269,8 @@ class WorkspaceWorker:
 
     def save_draft(self, job, data):
         with self.store.lock, self.store.conn:
+            if job['lead_id']:
+                self.assert_fresh(job)
             self.store.conn.execute('INSERT OR REPLACE INTO ws_drafts VALUES(?,?)', (job['id'], json.dumps(data)))
 
     def prepare(self, state):
@@ -272,7 +321,10 @@ class WorkspaceWorker:
                                           (day, job['id'], reservation, self.config.workspace_model))
             usage_id = cur.lastrowid
         result = self.model.generate(stage, payload, output_model)
-        result['data'] = output_model.model_validate(result['data']).model_dump()
+        try:
+            result['data'] = output_model.model_validate(result['data']).model_dump()
+        except Exception:
+            raise ModelFailure('Workspace output failed application schema validation.') from None
         with self.store.lock, self.store.conn:
             self.store.conn.execute('UPDATE ws_usage SET actual_tokens=? WHERE id=?', (result.get('total_tokens'), usage_id))
         return result['data']
@@ -286,21 +338,31 @@ class WorkspaceWorker:
             rubric = self.store.get_setting('ws_rubric')
             book = self.store.get_setting('playbook')
             book_context = {k: book.get(k) for k in ('approved', 'company', 'product', 'customer_profile', 'facts', 'qualification')}
-            units = []
+        def source_units():
             for call_id, call in draft['calls'].items():
-                chunks = list(evidence.readable_sources(self.store, call_id, max_chars=self.config.workspace_chunk_chars))
-                units.extend((call_id, call['capture']['revision'], n, chunk) for n, chunk in enumerate(chunks))
+                with self.store.lock:
+                    chunks = list(evidence.readable_sources(self.store, call_id, max_chars=self.config.workspace_chunk_chars))
+                for n, chunk in enumerate(chunks):
+                    yield call_id, call['capture']['revision'], n, chunk
             notes = [n for n in draft['notes'] if not n['confirmed']]
-            note_sources = [{'source_id': n['id'], 'note_id': n['id'], 'text': n['text'], 'role': 'operator_note'} for n in notes]
-            if note_sources:
-                units.append((None, job['generation'], 0, note_sources))
+            chunk, size, n = [], 0, 0
+            for note in notes:
+                source = {'source_id': note['id'], 'note_id': note['id'], 'text': note['text'], 'role': 'operator_note'}
+                if chunk and size + len(note['text']) > self.config.workspace_chunk_chars:
+                    yield None, job['generation'], n, chunk
+                    chunk, size, n = [], 0, n + 1
+                chunk.append(source)
+                size += len(note['text'])
+            if chunk:
+                yield None, job['generation'], n, chunk
         draft['claims'], draft['commitments'], draft['questions'] = [], [], []
         coverage = draft['coverage']
-        coverage.update(total_chunks=len(units), processed_chunks=0,
-                        total_characters=sum(len(s['text']) for *_, chunk in units for s in chunk), processed_characters=0)
+        coverage.update(total_chunks=0, processed_chunks=0, total_characters=0, processed_characters=0)
         usable_calls = set()
         requests_made = 0
-        for call_id, revision, n, chunk in units:
+        for call_id, revision, n, chunk in source_units():
+            coverage['total_chunks'] += 1
+            coverage['total_characters'] += sum(len(source['text']) for source in chunk)
             self.job(state)
             key = intelligence.digest([call_id or job['lead_id'], revision, n, rubric['version'],
                                        intelligence.digest(book_context), PROMPT_VERSION, self.config.workspace_model])
@@ -315,10 +377,9 @@ class WorkspaceWorker:
                            'capture_notice': 'Source fragments only. Missing words/timing are not recoverable.'}
                 raw = self.model_request(job, 'extract', payload, Extraction)
                 requests_made += 1
-                with self.store.lock:
+                with self.store.lock, self.store.conn:
                     self.assert_fresh(job)
                     extraction = intelligence.validate_extraction(self.store, job['lead_id'], call_id, revision, raw, chunk)
-                with self.store.lock, self.store.conn:
                     self.store.conn.execute('INSERT OR REPLACE INTO ws_extractions VALUES(?,?,?,?,?,?)',
                                             (key, call_id or 'notes:' + job['lead_id'], revision, n, json.dumps(extraction), now_iso()))
             else:
@@ -334,6 +395,8 @@ class WorkspaceWorker:
         draft['usable_calls'] = len(usable_calls)
         draft['claims'] = list({c['id']: c for c in draft['claims']}.values())
         self.save_draft(job, draft)
+        if not coverage['all_chunks_processed']:
+            raise ChunkContinuation()
         return {'phase': 'extracted'}
 
     def reconcile(self, state):
@@ -375,7 +438,7 @@ class WorkspaceWorker:
                 draft['plan_skipped'] = 'Workspace changed while analyzing; assessment retained, layout left unchanged.'
                 self.save_draft(job, draft)
                 return {'phase': 'layout_skipped'}
-            if job['kind'] == 'analysis' and not draft['claims']:
+            if job['kind'] == 'analysis' and (not draft['claims'] or workspace['spec']['mode'] == 'manual'):
                 return {'phase': 'no_evidence_no_layout_changes'}
             target_view = job['payload'].get('view_id', 'today')
             view = presentation.view_by_id(workspace['spec'], target_view)
@@ -392,8 +455,14 @@ class WorkspaceWorker:
                          ('potential', 'stage', 'confidence', 'unknowns', 'needs_decision', 'awaiting_proposal')},
                        'constraints': 'Only modify referenced widgets; protected All leads remains unfiltered. '
                                       'No model-authored record arrays or metrics are accepted in operations.'}
-        plan = self.model_request(job, 'plan', payload, Plan)
-        draft['plan'] = plan
+        try:
+            plan = self.model_request(job, 'plan', payload, Plan)
+            draft['plan'] = plan
+        except (ModelFailure, ModelUnavailable, BudgetExceeded):
+            if job['kind'] == 'command':
+                raise
+            draft['plan'] = None
+            draft['plan_skipped'] = 'Presentation planning unavailable; the validated evidence assessment is retained.'
         self.save_draft(job, draft)
         return {'phase': 'planned'}
 
@@ -410,7 +479,13 @@ class WorkspaceWorker:
                     draft['plan_skipped'] = 'Newer manual layout retained.'
                     draft['plan'] = None
                 else:
-                    presentation.transform(self.store, workspace['spec'], changes, 'agent')
+                    try:
+                        presentation.transform(self.store, workspace['spec'], changes, 'agent')
+                    except (ValueError, KeyError):
+                        if job['kind'] == 'command':
+                            raise ModelFailure('Workspace plan failed validation; the saved workspace is unchanged.') from None
+                        draft['plan'] = None
+                        draft['plan_skipped'] = 'Generated presentation plan failed validation; evidence assessment retained.'
         self.save_draft(job, draft)
         return {'phase': 'validated'}
 

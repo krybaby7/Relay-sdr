@@ -156,5 +156,21 @@ def migrate(store):
                     call['transcript_storage'] = 'indexed_v1'
                     conn.execute('UPDATE calls SET data=? WHERE id=?', (json.dumps(call), row['id']))
                 conn.execute('INSERT INTO ws_migrations VALUES(1,?)', (now_iso(),))
+        if not conn.execute('SELECT 1 FROM ws_migrations WHERE version=2').fetchone():
+            with conn:
+                for row in conn.execute('SELECT id,data FROM leads').fetchall():
+                    lead = json.loads(row['data'])
+                    if lead.get('notes'):
+                        store._legacy_note(row['id'], lead['notes'])
+                conn.execute('ALTER TABLE ws_segments ADD COLUMN source_order INTEGER')
+                conn.execute('UPDATE ws_segments SET source_order=seq')
+                conn.execute('CREATE INDEX ws_segments_order ON ws_segments(call_id,active,source_order,seq)')
+                conn.execute('CREATE TABLE ws_redactions(call_id TEXT NOT NULL, event_id TEXT NOT NULL, PRIMARY KEY(call_id,event_id))')
+                conn.execute('INSERT INTO ws_migrations VALUES(2,?)', (now_iso(),))
+        if not conn.execute('SELECT 1 FROM ws_migrations WHERE version=3').fetchone():
+            with conn:
+                conn.execute('CREATE TABLE ws_checkpoint_purge(job_id TEXT PRIMARY KEY)')
+                conn.execute('CREATE TABLE ws_source_overrides(call_id TEXT NOT NULL,event_id TEXT NOT NULL,PRIMARY KEY(call_id,event_id))')
+                conn.execute('INSERT INTO ws_migrations VALUES(3,?)', (now_iso(),))
         conn.executescript(TRIGGERS)
         conn.commit()

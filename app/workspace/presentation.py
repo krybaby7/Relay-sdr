@@ -63,6 +63,10 @@ def validate_fields(store, spec):
 
 def validate_layout_lock(old, new):
     """Pinned widgets cannot change geometry, contents, or membership under an AI patch."""
+    for view in old['views']:
+        if view['locked']:
+            if view_by_id(new, view['id']) != view or any(new['widgets'].get(k) != old['widgets'][k] for k in view['widgets']):
+                raise Locked('A locked view and all of its widget configurations are protected.')
     for key, widget in old['widgets'].items():
         if not widget['pinned']:
             continue
@@ -209,6 +213,7 @@ def restore(store, base_version, target_version=None):
                 raise ValueError('Revision does not exist.')
             candidate = Workspace.model_validate_json(row['data']).model_dump()
             reason = f'Restored workspace revision {target_version}. Lead records retained.'
+        validate_fields(store, candidate)
         version = base_version + 1
         data = json.dumps(candidate)
         store.conn.execute('UPDATE ws_workspace SET version=?,data=? WHERE singleton=1', (version, data))

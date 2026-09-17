@@ -51,6 +51,10 @@ def strict_schema(model):
         if isinstance(node, dict):
             node.pop('default', None)
             node.pop('discriminator', None)
+            if 'oneOf' in node:
+                node['anyOf'] = node.pop('oneOf')
+            if 'const' in node:
+                node['enum'] = [node.pop('const')]
             if 'properties' in node:
                 node['required'] = list(node['properties'])
                 node['additionalProperties'] = False
@@ -70,7 +74,7 @@ class ResponsesModel:
 
     @property
     def available(self):
-        return bool(self.config.workspace_key)
+        return bool(self.config.workspace_key and self.config.workspace_model)
 
     def generate(self, stage, payload, output_model):
         if not self.available:

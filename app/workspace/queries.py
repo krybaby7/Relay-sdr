@@ -27,7 +27,7 @@ def compile_query(store, query: Query):
     Day boundaries are in the operator workspace timezone (Africa/Cairo by
     default), while due_at values are UTC. Permission recorded is not preflight.
     """
-    tz = ZoneInfo(store.get_setting('ws_timezone') or 'Africa/Cairo')
+    tz = ZoneInfo(store.get_setting('ws_timezone') or 'UTC')
     now = datetime.now(timezone.utc)
     tomorrow = (now.astimezone(tz).replace(hour=0, minute=0, second=0, microsecond=0)
                 + timedelta(days=1)).astimezone(timezone.utc).isoformat()
@@ -176,8 +176,9 @@ def aggregates(store, query):
 
 
 def tasks_for_query(store, query, *, page=1, page_size=50):
+    if not 1 <= page <= 100000 or not 1 <= page_size <= PAGE_LIMIT:
+        raise ValueError('Invalid page bounds.')
     base, where, params = compile_query(store, query)
-    tail = " FROM ws_tasks t JOIN projected p ON p.id=t.lead_id"
     filtered = base + ', selected AS (SELECT * FROM projected' + where + ') '
     rows = store.conn.execute(filtered + '''SELECT t.*,p.name,p.company,p.eligibility FROM ws_tasks t
       JOIN selected p ON p.id=t.lead_id ORDER BY t.status IN ('done','cancelled'),t.due_at IS NULL,t.due_at,t.created_at DESC
@@ -187,6 +188,27 @@ def tasks_for_query(store, query, *, page=1, page_size=50):
 
 
 def calls_for_query(store, query, *, page=1, page_size=25):
+    if not 1 <= page <= 100000 or not 1 <= page_size <= PAGE_LIMIT:
+        raise ValueError('Invalid page bounds.')
+    if query.scope == 'practice':
+        params = []
+        predicate = "ci.kind!='twilio'"
+        if query.search:
+            predicate += " AND (coalesce(li.name,'') LIKE ? ESCAPE '\\' OR coalesce(li.company,'') LIKE ? ESCAPE '\\')"
+            params += [like(query.search)] * 2
+        # Practice has no real commercial assessment. Only supported practice record filters apply.
+        if query.filters:
+            base, where, filter_params = compile_query(store, query)
+            prefix = base + ', selected AS (SELECT * FROM projected' + where + ') '
+            predicate += ' AND ci.lead_id IN (SELECT id FROM selected)'
+            params = filter_params + params
+        else:
+            prefix = ''
+        rows = store.conn.execute(prefix + '''SELECT ci.*,li.name,li.company,cap.segment_count,cap.dropped,cap.close_observed
+          FROM ws_call_index ci LEFT JOIN ws_lead_index li ON li.lead_id=ci.lead_id
+          JOIN ws_capture cap ON cap.call_id=ci.call_id WHERE ''' + predicate +
+          ' ORDER BY ci.created_at DESC,ci.call_id LIMIT ? OFFSET ?', (*params, page_size + 1, (page-1)*page_size)).fetchall()
+        return {'items': [dict(r) for r in rows[:page_size]], 'page': page, 'has_more': len(rows) > page_size}
     base, where, params = compile_query(store, query)
     filtered = base + ', selected AS (SELECT * FROM projected' + where + ') '
     scope = "ci.kind!='twilio'" if query.scope == 'practice' else "ci.kind='twilio'"
@@ -208,7 +230,7 @@ def lead_detail(store, lead_id):
     notes = [dict(r) for r in store.conn.execute('SELECT * FROM ws_notes WHERE lead_id=? ORDER BY created_at', (lead_id,))]
     tasks = json_rows(store.conn.execute('SELECT * FROM ws_tasks WHERE lead_id=? ORDER BY created_at DESC LIMIT 200', (lead_id,)))
     eligible = eligibility(store, lead)
-    rank, reason = priority(tasks, eligible, assessment['data'] if assessment else None)
+    rank, reason = priority(tasks, eligible, assessment['data'] if assessment else None, zone=store.get_setting('ws_timezone') or 'UTC')
     calls = [dict(r) for r in store.conn.execute('SELECT ci.*,cap.segment_count,cap.dropped,cap.close_observed '
               'FROM ws_call_index ci JOIN ws_capture cap ON ci.call_id=cap.call_id '
               'WHERE ci.lead_id=? ORDER BY ci.created_at DESC LIMIT 50', (lead_id,))]
