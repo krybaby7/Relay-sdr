@@ -1,0 +1,214 @@
+diff --git a/app/main.py b/app/main.py
+index 44fbde1ad0cf3eea316e4e58b13d3d27eae51bb0..caf7001ef329da11bfcc34d3632c83022b051529 100644
+--- a/app/main.py
++++ b/app/main.py
+@@ -48 +48 @@ class BodyLimit:
+-def create_app(config: Config | None = None, *, provider=None):
++def create_app(config: Config | None = None, *, provider=None, workspace_model=None):
+@@ -51,0 +52,4 @@ def create_app(config: Config | None = None, *, provider=None):
++    from .workspace.worker import WorkspaceWorker
++    from .workspace.routes import router as workspace_router
++    store.setting('ws_timezone', c.workspace_timezone)
++    workspace = WorkspaceWorker(store, c, model=workspace_model)
+@@ -79,14 +83,20 @@ def create_app(config: Config | None = None, *, provider=None):
+-        yield
+-        for stop in sessions.values(): stop.set()
+-        # Sleeping expiry watchdogs are not work to finish during shutdown.
+-        for task in list(timers): task.cancel()
+-        if timers: await asyncio.gather(*list(timers), return_exceptions=True)
+-        active_phone = [x for x in store.all('calls') if x['kind'] == 'twilio' and x['status'] in ACTIVE]
+-        if active_phone:
+-            with contextlib.suppress(asyncio.TimeoutError):
+-                await asyncio.wait_for(asyncio.gather(*(stop_phone(x['id']) for x in active_phone)), 16)
+-        if tasks:
+-            done, pending = await asyncio.wait(list(tasks), timeout=12)
+-            for task in pending: task.cancel()
+-            await asyncio.gather(*pending, return_exceptions=True)
+-        store.close()
++        workspace_task = asyncio.create_task(workspace.loop())
++        try:
++            yield
++        finally:
++            workspace.stop()
++            for stop in sessions.values(): stop.set()
++            # Sleeping expiry watchdogs are not work to finish during shutdown.
++            for task in list(timers): task.cancel()
++            if timers: await asyncio.gather(*list(timers), return_exceptions=True)
++            active_phone = [x for x in store.all('calls') if x['kind'] == 'twilio' and x['status'] in ACTIVE]
++            if active_phone:
++                with contextlib.suppress(asyncio.TimeoutError):
++                    await asyncio.wait_for(asyncio.gather(*(stop_phone(x['id']) for x in active_phone)), 16)
++            if tasks:
++                done, pending = await asyncio.wait(list(tasks), timeout=12)
++                for task in pending: task.cancel()
++                await asyncio.gather(*pending, return_exceptions=True)
++            await workspace_task
++            workspace.close()
++            store.close()
+@@ -94,0 +105 @@ def create_app(config: Config | None = None, *, provider=None):
++    app.state.workspace = workspace
+@@ -190 +201 @@ def create_app(config: Config | None = None, *, provider=None):
+-        overview = [{k: v for k, v in item.items() if k != 'transcript'} | {'transcript_fragments': len(item['transcript'])} for item in calls]
++        overview = [{k: v for k, v in item.items() if k != 'transcript'} | {'transcript_fragments': item['transcript_fragments']} for item in calls]
+@@ -508,0 +520,9 @@ def create_app(config: Config | None = None, *, provider=None):
++    app.include_router(workspace_router(store, workspace, admin))
++
++    @app.get('/leads')
++    async def leads_workspace():
++        page = WEB / 'workspace' / 'index.html'
++        if not page.is_file():
++            return JSONResponse({'detail': 'Workspace frontend is not built. Run: cd frontend && npm ci && npm run build'}, status_code=503)
++        return FileResponse(page)
++
+diff --git a/app/workspace/evidence.py b/app/workspace/evidence.py
+index 55f2471fff12bd25d1f40a9deab8a50dfbb3063e..a6850ef9b5c802cd30ce24155cc2c40bf96d54e0 100644
+--- a/app/workspace/evidence.py
++++ b/app/workspace/evidence.py
+@@ -67,0 +68,2 @@ def flag(store, call_id, name, **changes):
++        if flags == set(row['flags']) and all(int(row[k]) == int(v) for k, v in changes.items()):
++            return
+@@ -74 +76 @@ def flag(store, call_id, name, **changes):
+-def append(store, call_id, event, *, max_segments=MAX_SEGMENTS, max_bytes=MAX_BYTES):
++def append(store, call_id, event, *, max_segments=MAX_SEGMENTS, max_bytes=MAX_BYTES, human=False):
+@@ -87,0 +90,2 @@ def append(store, call_id, event, *, max_segments=MAX_SEGMENTS, max_bytes=MAX_BY
++        if eid and store.conn.execute('SELECT 1 FROM ws_redactions WHERE call_id=? AND event_id=?', (call_id, eid)).fetchone():
++            return None
+@@ -107 +111 @@ def append(store, call_id, event, *, max_segments=MAX_SEGMENTS, max_bytes=MAX_BY
+-        previous = store.conn.execute('SELECT id FROM ws_segments WHERE call_id=? AND event_id=? AND active=1',
++        previous = store.conn.execute('SELECT id,source_order FROM ws_segments WHERE call_id=? AND event_id=? AND active=1',
+@@ -108,0 +113,3 @@ def append(store, call_id, event, *, max_segments=MAX_SEGMENTS, max_bytes=MAX_BY
++        protected = bool(eid and not human and store.conn.execute('SELECT 1 FROM ws_source_overrides WHERE call_id=? AND event_id=?', (call_id, eid)).fetchone())
++        if protected:
++            flags.add('provider_revision_conflicts_with_human_correction')
+@@ -110 +117 @@ def append(store, call_id, event, *, max_segments=MAX_SEGMENTS, max_bytes=MAX_BY
+-        if previous:
++        if previous and not protected:
+@@ -114 +121 @@ def append(store, call_id, event, *, max_segments=MAX_SEGMENTS, max_bytes=MAX_BY
+-        store.conn.execute('INSERT INTO ws_segments VALUES(?,?,?,?,?,?,?,?,?,?,?,?,1,0)',
++        store.conn.execute('INSERT INTO ws_segments(id,call_id,seq,event_id,content_hash,role,text,start_ms,end_ms,received_at,raw,supersedes,active,redacted,source_order) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,1,0,?)',
+@@ -116 +123,5 @@ def append(store, call_id, event, *, max_segments=MAX_SEGMENTS, max_bytes=MAX_BY
+-                            now_iso(), json.dumps(raw), supersedes))
++                            now_iso(), json.dumps(raw), supersedes, previous['source_order'] if previous else cap['segment_count'] + 1))
++        if protected:
++            store.conn.execute('UPDATE ws_segments SET active=0 WHERE id=?', (ident,))
++        if human and eid:
++            store.conn.execute('INSERT OR IGNORE INTO ws_source_overrides VALUES(?,?)', (call_id, eid))
+@@ -124,0 +136,2 @@ def segments(store, call_id, *, offset=0, limit=200, include_replaced=False):
++    if not 0 <= offset <= 100000 or not 1 <= limit <= 100000:
++        raise ValueError('Invalid segment range.')
+@@ -128 +141 @@ def segments(store, call_id, *, offset=0, limit=200, include_replaced=False):
+-                             'ORDER BY seq LIMIT ? OFFSET ?', (call_id, limit, offset)).fetchall()
++                             'ORDER BY source_order,seq LIMIT ? OFFSET ?', (call_id, limit, offset)).fetchall()
+@@ -140 +153 @@ def readable_sources(store, call_id, *, max_chars=24000):
+-                             'WHERE call_id=? AND active=1 AND redacted=0 ORDER BY seq', (call_id,))
++                             'WHERE call_id=? AND active=1 AND redacted=0 ORDER BY source_order,seq', (call_id,))
+@@ -174,0 +188,3 @@ def resolve_reference(ref, sources, *, lead_id, store):
++        note = store.conn.execute('SELECT lead_id,active,text FROM ws_notes WHERE id=?', (source['note_id'],)).fetchone()
++        if not note or note['lead_id'] != lead_id or not note['active'] or ref['quote'] not in note['text']:
++            raise ValueError('Note reference is stale or belongs to a different lead.')
+@@ -190,0 +207,4 @@ def resolve_reference(ref, sources, *, lead_id, store):
++    for span in spans:
++        saved = store.conn.execute('SELECT text,call_id,active,redacted FROM ws_segments WHERE id=?', (span['segment_id'],)).fetchone()
++        if not saved or saved['call_id'] != source['call_id'] or not saved['active'] or saved['redacted'] or span['end'] > len(saved['text']):
++            raise ValueError('Evidence source is stale or unavailable.')
+diff --git a/app/workspace/intelligence.py b/app/workspace/intelligence.py
+index 707e9d818b6f11a0a45304b00eafdfd025d42c1e..9b8d5fb4ca1a3d10480cdc3b41d86e94f9a66044 100644
+--- a/app/workspace/intelligence.py
++++ b/app/workspace/intelligence.py
+@@ -138,0 +139,4 @@ def compute_assessment(claims, notes, rubric, *, usable_calls, coverage, previou
++    for topic in RUBRIC_TOPICS:
++        yes_topics.discard(topic)
++        if criteria[topic]['value'] == 'yes':
++            yes_topics.add(topic)
+@@ -161 +165 @@ def eligibility(store, lead):
+-def priority(tasks, eligible, assessment, *, now=None):
++def priority(tasks, eligible, assessment, *, now=None, zone="UTC"):
+@@ -162,0 +167 @@ def priority(tasks, eligible, assessment, *, now=None):
++    tz = ZoneInfo(zone)
+@@ -171 +176 @@ def priority(tasks, eligible, assessment, *, now=None):
+-            elif due.date() == now.date():
++            elif due.astimezone(tz).date() == now.astimezone(tz).date():
+@@ -178 +183 @@ def priority(tasks, eligible, assessment, *, now=None):
+-        return 'today', 'A recorded internal commitment is due today (UTC display reference).'
++        return 'today', 'A recorded internal commitment is due today in the workspace timezone.'
+diff --git a/app/workspace/migrations.py b/app/workspace/migrations.py
+index 9d4eda0c3014f7d5219d076d7b6f34fcef73934b..985285a358ec75560ac173fe4a33f4bae0262327 100644
+--- a/app/workspace/migrations.py
++++ b/app/workspace/migrations.py
+@@ -158,0 +159,16 @@ def migrate(store):
++        if not conn.execute('SELECT 1 FROM ws_migrations WHERE version=2').fetchone():
++            with conn:
++                for row in conn.execute('SELECT id,data FROM leads').fetchall():
++                    lead = json.loads(row['data'])
++                    if lead.get('notes'):
++                        store._legacy_note(row['id'], lead['notes'])
++                conn.execute('ALTER TABLE ws_segments ADD COLUMN source_order INTEGER')
++                conn.execute('UPDATE ws_segments SET source_order=seq')
++                conn.execute('CREATE INDEX ws_segments_order ON ws_segments(call_id,active,source_order,seq)')
++                conn.execute('CREATE TABLE ws_redactions(call_id TEXT NOT NULL, event_id TEXT NOT NULL, PRIMARY KEY(call_id,event_id))')
++                conn.execute('INSERT INTO ws_migrations VALUES(2,?)', (now_iso(),))
++        if not conn.execute('SELECT 1 FROM ws_migrations WHERE version=3').fetchone():
++            with conn:
++                conn.execute('CREATE TABLE ws_checkpoint_purge(job_id TEXT PRIMARY KEY)')
++                conn.execute('CREATE TABLE ws_source_overrides(call_id TEXT NOT NULL,event_id TEXT NOT NULL,PRIMARY KEY(call_id,event_id))')
++                conn.execute('INSERT INTO ws_migrations VALUES(3,?)', (now_iso(),))
+diff --git a/app/workspace/model.py b/app/workspace/model.py
+index 83bd9ca1a0e6e22fa9c2450463ee477bc06a1106..dbe671925c97b396a93240bb8da40ed2e043b771 100644
+--- a/app/workspace/model.py
++++ b/app/workspace/model.py
+@@ -53,0 +54,4 @@ def strict_schema(model):
++            if 'oneOf' in node:
++                node['anyOf'] = node.pop('oneOf')
++            if 'const' in node:
++                node['enum'] = [node.pop('const')]
+@@ -73 +77 @@ class ResponsesModel:
+-        return bool(self.config.workspace_key)
++        return bool(self.config.workspace_key and self.config.workspace_model)
+diff --git a/app/workspace/presentation.py b/app/workspace/presentation.py
+index 6bbd3193d6b905583b9115670f3a718f650f7bad..10267ffe19cd24bec6ef673fbf865839a4d59a40 100644
+--- a/app/workspace/presentation.py
++++ b/app/workspace/presentation.py
+@@ -65,0 +66,4 @@ def validate_layout_lock(old, new):
++    for view in old['views']:
++        if view['locked']:
++            if view_by_id(new, view['id']) != view or any(new['widgets'].get(k) != old['widgets'][k] for k in view['widgets']):
++                raise Locked('A locked view and all of its widget configurations are protected.')
+@@ -211,0 +216 @@ def restore(store, base_version, target_version=None):
++        validate_fields(store, candidate)
+diff --git a/app/workspace/queries.py b/app/workspace/queries.py
+index 61131fa4254b4eaa87e0b923256dfa925eb9c202..3acb537e53fc97007789246687484ca39088f182 100644
+--- a/app/workspace/queries.py
++++ b/app/workspace/queries.py
+@@ -30 +30 @@ def compile_query(store, query: Query):
+-    tz = ZoneInfo(store.get_setting('ws_timezone') or 'Africa/Cairo')
++    tz = ZoneInfo(store.get_setting('ws_timezone') or 'UTC')
+@@ -178,0 +179,2 @@ def tasks_for_query(store, query, *, page=1, page_size=50):
++    if not 1 <= page <= 100000 or not 1 <= page_size <= PAGE_LIMIT:
++        raise ValueError('Invalid page bounds.')
+@@ -180 +181,0 @@ def tasks_for_query(store, query, *, page=1, page_size=50):
+-    tail = " FROM ws_tasks t JOIN projected p ON p.id=t.lead_id"
+@@ -189,0 +191,21 @@ def calls_for_query(store, query, *, page=1, page_size=25):
++    if not 1 <= page <= 100000 or not 1 <= page_size <= PAGE_LIMIT:
++        raise ValueError('Invalid page bounds.')
++    if query.scope == 'practice':
++        params = []
++        predicate = "ci.kind!='twilio'"
++        if query.search:
++            predicate += " AND (coalesce(li.name,'') LIKE ? ESCAPE '\\' OR coalesce(li.company,'') LIKE ? ESCAPE '\\')"
++            params += [like(query.search)] * 2
++        # Practice has no real commercial assessment. Only supported practice record filters apply.
++        if query.filters:
++            base, where, filter_params = compile_query(store, query)
++            prefix = base + ', selected AS (SELECT * FROM projected' + where + ') '
++            predicate += ' AND ci.lead_id IN (SELECT id FROM selected)'
++            params = filter_params + params
++        else:
++            prefix = ''
++        rows = store.conn.execute(prefix + '''SELECT ci.*,li.name,li.company,cap.segment_count,cap.dropped,cap.close_observed
++          FROM ws_call_index ci LEFT JOIN ws_lead_index li ON li.lead_id=ci.lead_id
++          JOIN ws_capture cap ON cap.call_id=ci.call_id WHERE ''' + predicate +
++          ' ORDER BY ci.created_at DESC,ci.call_id LIMIT ? OFFSET ?', (*params, page_size + 1, (page-1)*page_size)).fetchall()
++        return {'items': [dict(r) for r in rows[:page_size]], 'page': page, 'has_more': len(rows) > page_size}
+@@ -211 +233 @@ def lead_detail(store, lead_id):
+-    rank, reason = priority(tasks, eligible, assessment['data'] if assessment else None)
++    rank, reason = priority(tasks, eligible, assessment['data'] if assessment else None, zone=store.get_setting('ws_timezone') or 'UTC')
