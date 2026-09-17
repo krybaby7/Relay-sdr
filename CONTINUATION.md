@@ -1,28 +1,23 @@
 # AI leads workspace continuation — 2026-09-18
 
-Branch: `feat/ai-leads-workspace-continue`, forked non-destructively from recovery commit `c0c35ddfb9d23596d492a41a18c79587b1b031b0` (which includes feature head `19c4c091a98f55c63433d9bc405f5b1303191b28`). Main was inspected at `22f69c92ecfe0c690362947351b3703913d7b379` and is not modified.
+Branch: `feat/ai-leads-workspace-continue`. Recovery anchor: `c0c35ddfb9d23596d492a41a18c79587b1b031b0`, including feature head `19c4c091a98f55c63433d9bc405f5b1303191b28`. Main remains unchanged at `22f69c92ecfe0c690362947351b3703913d7b379`.
 
-## Current status
+## Milestone 1: native recovery restored
 
-The complete GitHub handoff, RECOVERY.md, RESUME.md, GITHUB-PRESERVATION.json, original 264-line implementation brief, branch heads and ancestry have been read through the connected GitHub tools. The recovery directory remains unchanged. Recovery source is an INITIAL overlay, not a verified release.
+Read the complete handoff, preservation metadata, RESUME, RECOVERY and original implementation brief. Inspected current branches and ancestry. Restored all 22 recovered files byte-for-byte to application paths, preserving the entire recovery directory unchanged. These are INITIAL versions, not a verified integrated release.
 
-Execution limitation: direct git/network DNS in the editing container failed (`Could not resolve host: github.com`). Connected GitHub reads/writes are available. Use a read-only Actions checkout of the native repository for isolated verification and, where necessary, transfer a newly generated native-source/toolchain snapshot for local execution. No old dependency artifact or encoded recovery transport is required.
+A fresh native GitHub checkout was verified in Actions run 35275591238 at commit 4ff7a632c445d6b342eaf2d08eec4cc1c0aec68e. Direct git DNS is unavailable in the editing container; a newly generated native-source/toolchain snapshot from that run enables local execution. No historical expiring artifact or encoded transport was used.
 
-## Verification
+## Actual tests
 
-- Current branch/ancestry inspection: complete. Recovery is five commits ahead of historical feature, zero behind; changes are recovery preservation only.
-- `verify_github_checkpoint.py`: inspected; execution pending.
-- Baseline tests: pending fresh run. Historical logs are not current results.
-- Feature integration/tests/browser checks: pending.
+- `python recovery/ai-leads-workspace-v2/verify_github_checkpoint.py`: passed in fresh Actions and local checkout. 66 payload hashes / 67 text files including manifest, 26 Python syntax checks. Integrity only.
+- `python -m pytest tests -q`: 87 passed, one Starlette/AnyIO deprecation warning, Actions 1.36s; local 1.08s. Baseline before integration, not feature tests.
+- No live provider/model calls. No real calls, lead contact, deployment, or outbound enablement.
 
-## Next steps
+## Next milestone
 
-1. Run checkpoint integrity and baseline protections in an isolated no-secrets/no-outbound test environment.
-2. Restore the 22 native recovered source files into application paths, retaining the original recovery tree untouched.
-3. Reconstruct missing router, Store/config/capture/lifecycle integration and styles; repair documented resilience gaps.
-4. Test backend, migrations, worker recovery, schema/security boundaries, typecheck/lint/build and desktop/mobile browser behavior. Record exact commands/results here.
-5. Push incremental useful milestones and open an accurately described PR; never merge or deploy.
+Reconstruct missing workspace router, Store/config/live lifecycle hooks, frontend styling and packaging; test the integrated app. Repair source revisions/finalization, resumable chunks, strict provider schema, human correction precedence, lock/pin/concurrency protection and bounded scoped queries. Add deterministic resilience and browser acceptance tests. Push source and exact test results incrementally.
 
 ## Boundaries
 
-No changes to main, force pushes, public deployment, outbound enablement, real calls, lead contact, recording settings, secrets or runtime data. Preserve authentication, consent, suppression, calling policy, signed callbacks, unknown-call reconciliation, provider contracts and practice isolation. Mocked tests are not live model/provider verification.
+No changes to main or recovery, no force push, merge, deployment, outbound enablement, recording changes, real data or secrets. Preserve authentication, consent, suppression, calling policy, signed callbacks, unknown-call reconciliation and practice isolation. Continue autonomously through implementation and verification.
