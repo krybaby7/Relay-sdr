@@ -1,0 +1,277 @@
+diff --git a/app/db.py b/app/db.py
+index f19e462a22a94216e6b9e972cd532643292057f2..69d241af7d0338cc23fcf251e90a67ee3629234d 100644
+--- a/app/db.py
++++ b/app/db.py
+@@ -59,0 +60 @@ class Store:
++            previous = self.get_setting(key)
+@@ -60,0 +62,7 @@ class Store:
++            if key == 'playbook' and previous != data and self.conn.execute(
++                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='ws_heads'").fetchone():
++                import time
++                from .workspace.presentation import audit
++                self.conn.execute('UPDATE ws_heads SET generation=generation+1,changed_at=? WHERE lead_id IN '
++                                  '(SELECT lead_id FROM ws_lead_index WHERE sample=0)', (time.time(),))
++                audit(self, 'human', 'playbook', None, 'Approved product context changed; affected assessments require reconciliation.')
+@@ -97,0 +106,2 @@ class Store:
++                from .workspace.presentation import audit
++                audit(self, 'system', 'call_updated', id, 'Captured call lifecycle or outcome changed.')
+@@ -102,0 +113,3 @@ class Store:
++            if table == 'leads' and before != data:
++                from .workspace.presentation import audit
++                audit(self, 'human', 'lead_updated', id, 'Lead record updated; contact policy remains enforced separately.')
+@@ -113,0 +127,2 @@ class Store:
++            from .workspace.presentation import audit
++            audit(self, 'human', 'lead_created', data['id'], 'Fictional sample created.' if sample else 'Lead record created, initially unassessed.')
+@@ -133,0 +149,2 @@ class Store:
++                from .workspace.presentation import audit
++                audit(self, 'system', 'suppression', data['id'], 'Permanent do-not-call suppression applied.')
+diff --git a/app/workspace/intelligence.py b/app/workspace/intelligence.py
+index 9b8d5fb4ca1a3d10480cdc3b41d86e94f9a66044..773073d7eaa39648421824322125c2c0d7bb19d3 100644
+--- a/app/workspace/intelligence.py
++++ b/app/workspace/intelligence.py
+@@ -7 +7 @@ import re
+-from datetime import datetime, timedelta, timezone
++from datetime import date, datetime, timedelta, timezone
+@@ -14,0 +15 @@ RUBRIC_TOPICS = ('need', 'fit', 'intent', 'authority')
++FACT_TOPICS = (*RUBRIC_TOPICS, 'objection', 'budget', 'decision_process', 'timing', 'procurement', 'proposal', 'decision_needed')
+@@ -77 +78 @@ def resolve_due(phrase: str, call_time: str | None, zone: str | None):
+-            day_value = datetime.strptime(day, '%Y-%m-%d').date()
++            day_value = date.fromisoformat(day)
+@@ -93,3 +94,4 @@ def resolve_due(phrase: str, call_time: str | None, zone: str | None):
+-def compute_assessment(claims, notes, rubric, *, usable_calls, coverage, previous=None):
+-    criteria, conflicts, refs = {}, [], []
+-    for topic in RUBRIC_TOPICS:
++def compute_assessment(claims, notes, rubric, *, usable_calls, coverage, previous=None, playbook_approved=True):
++    topics, conflicts = {}, []
++    human_facts = []
++    for topic in FACT_TOPICS:
+@@ -101 +103,3 @@ def compute_assessment(claims, notes, rubric, *, usable_calls, coverage, previou
+-            value = override['value']
++            value, source = override['value'], 'human_confirmed'
++            human_facts.append({'topic': topic, 'value': value, 'text': override['text'],
++                                'reference': {'note_id': override['id']}})
+@@ -103 +107 @@ def compute_assessment(claims, notes, rubric, *, usable_calls, coverage, previou
+-                conflicts.append({'topic': topic, 'reason': 'New evidence conflicts with a confirmed human correction.',
++                conflicts.append({'topic': topic, 'reason': 'Evidence conflicts with a confirmed human correction.',
+@@ -105 +108,0 @@ def compute_assessment(claims, notes, rubric, *, usable_calls, coverage, previou
+-            source = 'human_confirmed'
+@@ -113,3 +116,5 @@ def compute_assessment(claims, notes, rubric, *, usable_calls, coverage, previou
+-        criteria[topic] = {'value': value, 'source': source, 'claim_ids': [c['id'] for c in related],
+-                           'human_note_id': override['id'] if override else None}
+-        refs.extend(c['id'] for c in related)
++        topics[topic] = {'value': value, 'source': source, 'claim_ids': [c['id'] for c in related],
++                         'human_note_id': override['id'] if override else None}
++    if not playbook_approved:
++        topics['fit'].update(value='unknown', source='playbook_not_approved')
++    criteria = {topic: topics[topic] for topic in RUBRIC_TOPICS}
+@@ -119 +124 @@ def compute_assessment(claims, notes, rubric, *, usable_calls, coverage, previou
+-    if not approved or usable_calls == 0 or known < 2:
++    if not approved or not playbook_approved or usable_calls == 0 or known < 2:
+@@ -123,2 +128,2 @@ def compute_assessment(claims, notes, rubric, *, usable_calls, coverage, previou
+-    elif criteria['need']['value'] == criteria['fit']['value'] == 'yes':
+-        potential = 'strong' if criteria['intent']['value'] == criteria['authority']['value'] == 'yes' else 'promising'
++    elif criteria['need']['value'] == 'yes' and criteria['fit']['value'] == 'yes':
++        potential = 'strong' if criteria['intent']['value'] == 'yes' and criteria['authority']['value'] == 'yes' else 'promising'
+@@ -127,2 +132,3 @@ def compute_assessment(claims, notes, rubric, *, usable_calls, coverage, previou
+-    confidence = 'unknown' if not claims else ('well_supported' if known == 4 and not conflicts and coverage['all_chunks_processed']
+-                                              else 'partial' if known > 1 else 'limited')
++    confidence = 'unknown' if not claims else (
++        'well_supported' if known == 4 and not conflicts and coverage['all_chunks_processed']
++        and not coverage.get('capture_gaps') else 'partial' if known > 1 else 'limited')
+@@ -130 +136 @@ def compute_assessment(claims, notes, rubric, *, usable_calls, coverage, previou
+-    if not any(c['topic'] == 'budget' and c['value'] != 'unknown' for c in claims):
++    if topics['budget']['value'] == 'unknown':
+@@ -133,0 +140,2 @@ def compute_assessment(claims, notes, rubric, *, usable_calls, coverage, previou
++    if not playbook_approved:
++        unknowns.insert(0, 'Product playbook needs approval; product fit and potential remain unassessed')
+@@ -138,5 +146 @@ def compute_assessment(claims, notes, rubric, *, usable_calls, coverage, previou
+-    yes_topics = {c['topic'] for c in claims if c['value'] == 'yes' and c['interpretation'] == 'explicit'}
+-    for topic in RUBRIC_TOPICS:
+-        yes_topics.discard(topic)
+-        if criteria[topic]['value'] == 'yes':
+-            yes_topics.add(topic)
++    yes_topics = {topic for topic, value in topics.items() if value['value'] == 'yes'}
+@@ -146,2 +150,3 @@ def compute_assessment(claims, notes, rubric, *, usable_calls, coverage, previou
+-            'criteria': criteria, 'confidence': confidence, 'coverage': coverage, 'stage': stage,
+-            'conflicts': conflicts, 'unknowns': unknowns, 'claim_ids': list(dict.fromkeys(refs)),
++            'criteria': criteria, 'topics': topics, 'human_facts': human_facts,
++            'confidence': confidence, 'coverage': coverage, 'stage': stage,
++            'conflicts': conflicts, 'unknowns': unknowns, 'claim_ids': [c['id'] for c in claims],
+@@ -152 +157 @@ def compute_assessment(claims, notes, rubric, *, usable_calls, coverage, previou
+-            'rubric_approved': approved, 'assessed_at': now_iso()}
++            'rubric_approved': approved, 'playbook_approved': playbook_approved, 'assessed_at': now_iso()}
+@@ -238 +243 @@ def add_note(store, lead_id, *, text, topic='note', value='unknown', confirmed=F
+-    if topic not in (*RUBRIC_TOPICS, 'note', 'timing', 'objection'):
++    if topic not in (*FACT_TOPICS, 'note'):
+@@ -239,0 +245,2 @@ def add_note(store, lead_id, *, text, topic='note', value='unknown', confirmed=F
++    if confirmed and topic == 'note':
++        raise ValueError('Choose a factual topic for a confirmed correction; general notes remain unconfirmed sources.')
+diff --git a/app/workspace/model.py b/app/workspace/model.py
+index dbe671925c97b396a93240bb8da40ed2e043b771..8d2aff65d6deb6d8e930165ad293dff55440c83d 100644
+--- a/app/workspace/model.py
++++ b/app/workspace/model.py
+@@ -10,0 +11 @@ import httpx
++import time
+@@ -12 +13 @@ import httpx
+-PROMPT_VERSION = 'workspace-2026-09-17-v1'
++PROMPT_VERSION = 'workspace-2026-09-18-v2'
+@@ -101,9 +102,14 @@ class ResponsesModel:
+-                response = client.post('https://api.openai.com/v1/responses', json=body,
+-                                       headers={'Authorization': 'Bearer ' + self.config.workspace_key})
+-            if response.status_code in (401, 403, 404):
+-                raise ModelUnavailable(f'Workspace model access unavailable (HTTP {response.status_code}).')
+-            if response.status_code != 200:
+-                raise ModelFailure(f'Workspace provider request failed (HTTP {response.status_code}).')
+-            if len(response.content) > 512000:
+-                raise ModelFailure('Workspace provider response exceeds the application limit.')
+-            result = response.json()
++                deadline = time.monotonic() + self.config.workspace_timeout
++                with client.stream('POST', 'https://api.openai.com/v1/responses', json=body,
++                                   headers={'Authorization': 'Bearer ' + self.config.workspace_key}) as response:
++                    if response.status_code in (401, 403, 404):
++                        raise ModelUnavailable(f'Workspace model access unavailable (HTTP {response.status_code}).')
++                    if response.status_code != 200:
++                        raise ModelFailure(f'Workspace provider request failed (HTTP {response.status_code}).')
++                    chunks, size = [], 0
++                    for chunk in response.iter_bytes(chunk_size=8192):
++                        size += len(chunk)
++                        if size > 512000 or time.monotonic() > deadline:
++                            raise ModelFailure('Workspace provider response exceeded the size or time limit.')
++                        chunks.append(chunk)
++                    result = json.loads(b''.join(chunks))
+diff --git a/app/workspace/presentation.py b/app/workspace/presentation.py
+index 10267ffe19cd24bec6ef673fbf865839a4d59a40..1eac8ae9d2d267d42415c3288b61e5ec673781d1 100644
+--- a/app/workspace/presentation.py
++++ b/app/workspace/presentation.py
+@@ -151,0 +152,2 @@ def transform(store, before, changes: ChangeSet, actor):
++                if any(v['locked'] and key in v['widgets'] for v in spec['views']):
++                    raise Locked('Unlock every view sharing this widget before changing its configuration.')
+diff --git a/app/workspace/queries.py b/app/workspace/queries.py
+index 3acb537e53fc97007789246687484ca39088f182..b2f657b64ea2726ce450b0b69b8f5f136868d46e 100644
+--- a/app/workspace/queries.py
++++ b/app/workspace/queries.py
+@@ -28 +28 @@ def compile_query(store, query: Query):
+-    default), while due_at values are UTC. Permission recorded is not preflight.
++    when explicitly configured), while due_at values are UTC. Permission recorded is not preflight.
+@@ -72 +72,2 @@ def compile_query(store, query: Query):
+-             OR json_extract(assessment,'$.coverage.all_chunks_processed')=0 THEN 1 ELSE 0 END AS needs_review,
++             OR json_extract(assessment,'$.coverage.all_chunks_processed')=0
++             OR json_array_length(json_extract(assessment,'$.coverage.capture_gaps'))>0 THEN 1 ELSE 0 END AS needs_review,
+@@ -219,2 +220,2 @@ def calls_for_query(store, query, *, page=1, page_size=25):
+-      (*params, page_size, (page - 1) * page_size)).fetchall()
+-    return {'items': [dict(r) for r in rows], 'page': page, 'has_more': len(rows) == page_size}
++      (*params, page_size + 1, (page - 1) * page_size)).fetchall()
++    return {'items': [dict(r) for r in rows[:page_size]], 'page': page, 'has_more': len(rows) > page_size}
+@@ -230 +231 @@ def lead_detail(store, lead_id):
+-    notes = [dict(r) for r in store.conn.execute('SELECT * FROM ws_notes WHERE lead_id=? ORDER BY created_at', (lead_id,))]
++    notes = [dict(r) for r in store.conn.execute('SELECT * FROM ws_notes WHERE lead_id=? ORDER BY created_at DESC,id DESC LIMIT 50', (lead_id,))]
+@@ -233 +234,2 @@ def lead_detail(store, lead_id):
+-    rank, reason = priority(tasks, eligible, assessment['data'] if assessment else None, zone=store.get_setting('ws_timezone') or 'UTC')
++    ranking_tasks = [dict(r) for r in store.conn.execute('SELECT kind,status,min(due_at) AS due_at FROM ws_tasks WHERE lead_id=? GROUP BY kind,status', (lead_id,))]
++    rank, reason = priority(ranking_tasks, eligible, assessment['data'] if assessment else None, zone=store.get_setting('ws_timezone') or 'UTC')
+diff --git a/app/workspace/redaction.py b/app/workspace/redaction.py
+index 3fa67d2fe50685093f9655d5b3e2aa3704422030..687fd0450dc3a12f7cd79e927c2a730a9ad74300 100644
+--- a/app/workspace/redaction.py
++++ b/app/workspace/redaction.py
+@@ -49,0 +50,3 @@ def redact(store, ident, *, revision, reason, confirm):
++        call = store.get('calls', call_id, include_transcript=False)
++        lead = store.get('leads', lead_id) if lead_id else None
++        real_lead_id = lead_id if call['kind'] == 'twilio' and lead and not lead.get('sample') else None
+@@ -64 +67 @@ def redact(store, ident, *, revision, reason, confirm):
+-        if lead_id:
++        if real_lead_id:
+@@ -75 +78 @@ def redact(store, ident, *, revision, reason, confirm):
+-        affected = [r['id'] for r in store.conn.execute("SELECT id FROM ws_jobs WHERE lead_id=? OR kind='command'", (lead_id,))]
++        affected = [r['id'] for r in store.conn.execute("SELECT id FROM ws_jobs WHERE lead_id=? OR kind='command'", (real_lead_id,))] if real_lead_id else []
+@@ -77,0 +81 @@ def redact(store, ident, *, revision, reason, confirm):
++            store.conn.execute('UPDATE ws_jobs SET result=NULL WHERE id=?', (job_id,))
+@@ -82 +86 @@ def redact(store, ident, *, revision, reason, confirm):
+-                           (call_id, 'notes:' + (lead_id or ''), lead_id))
++                           (call_id, 'notes:' + (real_lead_id or ''), real_lead_id))
+@@ -84 +87,0 @@ def redact(store, ident, *, revision, reason, confirm):
+-        call = store.get('calls', call_id, include_transcript=False)
+@@ -102 +105 @@ def redact(store, ident, *, revision, reason, confirm):
+-                           {'logical_source': ident, 'revisions_removed': len(related), 'derived_lead_intelligence_removed': bool(lead_id)})
++                           {'logical_source': ident, 'revisions_removed': len(related), 'derived_lead_intelligence_removed': bool(real_lead_id)})
+@@ -104 +107 @@ def redact(store, ident, *, revision, reason, confirm):
+-                  'notice': 'Derived local intelligence was invalidated. Independent notes, backups and external deliveries are not erased by this operation.'}
++                  'notice': 'Captured source revisions and affected intelligence/cache/task copies were removed. Independent notes, saved presentation labels, backups and external deliveries require separate review.'}
+diff --git a/app/workspace/routes.py b/app/workspace/routes.py
+index afb6d68b9f6dedf1daf8d029c896ddd132326a07..d5a45762b9a8b7428d0a5fda79b3ad3a6e1dfbb2 100644
+--- a/app/workspace/routes.py
++++ b/app/workspace/routes.py
+@@ -157,0 +158,28 @@ def router(store, worker, admin):
++    @result.get('/leads/{lead_id}/collections/{kind}')
++    def collection(lead_id: str, kind: Literal['notes', 'tasks', 'history'],
++                   page: Annotated[int, Param(ge=1, le=100000)] = 1,
++                   page_size: Annotated[int, Param(ge=1, le=100)] = 25):
++        def read():
++            if not store.get('leads', lead_id):
++                raise KeyError(lead_id)
++            # Fixed projections and identifiers; never interpolate caller-supplied SQL.
++            statements = {
++                'notes': 'SELECT * FROM ws_notes WHERE lead_id=? ORDER BY created_at DESC,id DESC',
++                'tasks': 'SELECT * FROM ws_tasks WHERE lead_id=? ORDER BY created_at DESC,id DESC',
++                'history': "SELECT id,generation,created_at,model,rubric_version,json_extract(data,'$.potential') AS potential FROM ws_assessments WHERE lead_id=? ORDER BY id DESC",
++            }
++            rows = store.conn.execute(statements[kind] + ' LIMIT ? OFFSET ?',
++                                      (lead_id, page_size + 1, (page-1)*page_size)).fetchall()
++            items = queries.json_rows(rows[:page_size]) if kind == 'tasks' else [dict(r) for r in rows[:page_size]]
++            return {'items': items, 'page': page, 'has_more': len(rows) > page_size}
++        return locked(read)
++
++    @result.get('/notes/{note_id}')
++    def note_source(note_id: str, lead_id: str):
++        def read():
++            row = store.conn.execute('SELECT * FROM ws_notes WHERE id=? AND lead_id=?', (note_id, lead_id)).fetchone()
++            if not row:
++                raise KeyError(note_id)
++            return dict(row)
++        return locked(read)
++
+diff --git a/app/workspace/schema.py b/app/workspace/schema.py
+index 5986a1ab8a6a78366a07eb64185e938fd39f539b..a2656a84e44a24da7204ea87193480e265d5b336 100644
+--- a/app/workspace/schema.py
++++ b/app/workspace/schema.py
+@@ -7,0 +8 @@ from __future__ import annotations
++import math
+@@ -31 +32 @@ class Filter(Closed):
+-    value: str | bool | int | list[str] | None = None
++    value: str | bool | int | float | list[str] | None = None
+@@ -34,0 +36,2 @@ class Filter(Closed):
++        if isinstance(self.value, float) and not math.isfinite(self.value):
++            raise ValueError('Filter numbers must be finite.')
+@@ -147,0 +151,7 @@ class Workspace(Closed):
++        for view in self.views:
++            for bp in COLS:
++                entries = getattr(view.layouts, bp)
++                for n, a in enumerate(entries):
++                    for b in entries[n + 1:]:
++                        if a.x < b.x + b.w and a.x + a.w > b.x and a.y < b.y + b.h and a.y + a.h > b.y:
++                            raise ValueError('Widgets must not overlap; move or resize them into free space.')
+diff --git a/app/workspace/worker.py b/app/workspace/worker.py
+index ccd38e2df400789d26588ce7c210faeddebd4ef8..c5d9520ed52714a5cd6fda84345c03f3eaa16054 100644
+--- a/app/workspace/worker.py
++++ b/app/workspace/worker.py
+@@ -17,0 +18 @@ from langgraph.graph import StateGraph, START, END
++from langsmith import tracing_context
+@@ -157,0 +159,3 @@ class WorkspaceWorker:
++              AND (EXISTS(SELECT 1 FROM ws_call_index c WHERE c.lead_id=h.lead_id AND c.kind='twilio'
++                    AND c.status IN ('completed','failed','busy','no-answer','canceled','interrupted'))
++                   OR EXISTS(SELECT 1 FROM ws_notes n WHERE n.lead_id=h.lead_id AND n.active=1))
+@@ -159 +163,2 @@ class WorkspaceWorker:
+-                WHERE c.lead_id=h.lead_id AND c.kind='twilio' AND (cap.bridge_active=1 OR cap.last_event>?))
++                WHERE c.lead_id=h.lead_id AND c.kind='twilio' AND (cap.bridge_active=1 OR cap.last_event>?
++                  OR c.status NOT IN ('completed','failed','busy','no-answer','canceled','interrupted')))
+@@ -208 +213,2 @@ class WorkspaceWorker:
+-            self.graph.invoke(input_state, config)
++            with tracing_context(enabled=False):
++                self.graph.invoke(input_state, config)
+@@ -271,0 +278,3 @@ class WorkspaceWorker:
++            status = self.store.conn.execute('SELECT status FROM ws_jobs WHERE id=?', (job['id'],)).fetchone()
++            if not status or status['status'] == 'superseded':
++                raise StaleRun()
+@@ -421 +430,2 @@ class WorkspaceWorker:
+-                usable_calls=draft['usable_calls'], coverage=draft['coverage'], previous=draft['previous_assessment_id'])
++                usable_calls=draft['usable_calls'], coverage=draft['coverage'], previous=draft['previous_assessment_id'],
++                playbook_approved=bool(self.store.get_setting('playbook').get('approved')))
