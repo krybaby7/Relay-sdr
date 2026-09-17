@@ -1,0 +1,75 @@
+{
+  "run_id": "35285742889",
+  "source_commit": "ce62c08da4c0eafdf1bfc985c341a946d4044e07",
+  "scope": "Recovered native checkpoint. Mocked model/provider tests and loopback fictional browser fixture only. Not a completed release.",
+  "checks": [
+    {
+      "name": "recovery-integrity",
+      "command": [
+        "/opt/hostedtoolcache/Python/3.13.15/x64/bin/python",
+        "recovery/ai-leads-workspace-v2/verify_github_checkpoint.py"
+      ],
+      "cwd": ".",
+      "exit_code": 0,
+      "seconds": 0.1
+    },
+    {
+      "name": "backend",
+      "command": [
+        "/opt/hostedtoolcache/Python/3.13.15/x64/bin/python",
+        "-m",
+        "pytest",
+        "tests",
+        "-q"
+      ],
+      "cwd": ".",
+      "exit_code": 0,
+      "seconds": 17.87
+    },
+    {
+      "name": "typecheck",
+      "command": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "cwd": "frontend",
+      "exit_code": 0,
+      "seconds": 3.66
+    },
+    {
+      "name": "lint",
+      "command": [
+        "npm",
+        "run",
+        "lint"
+      ],
+      "cwd": "frontend",
+      "exit_code": 0,
+      "seconds": 1.92
+    },
+    {
+      "name": "build",
+      "command": [
+        "npm",
+        "run",
+        "build"
+      ],
+      "cwd": "frontend",
+      "exit_code": 0,
+      "seconds": 2.3
+    },
+    {
+      "name": "browser",
+      "command": [
+        "npm",
+        "run",
+        "test:e2e"
+      ],
+      "cwd": "frontend",
+      "exit_code": 1,
+      "seconds": 68.84
+    }
+  ],
+  "all_executed_checks_passed": false
+}

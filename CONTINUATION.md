@@ -47,3 +47,14 @@ Local acceptance run before this checkpoint: 155 tests passed (87 baseline + 68 
 On 2026-09-18, the user requested a durable checkpoint and fresh-chat prompt. Recovered the missing stylesheet, 68-case backend suite, browser fixture, expanded eight-case browser suite and frontend package scripts. Restored five native frontend files using guarded transformations recovered from the interrupted execution record. The original working tree and lockfile did not survive; this is a reconstructed checkpoint, not a byte-identical filesystem recovery or completed release. See `continuation/PRESERVED-FRONTEND.json` for source hashes and replacement counts.
 
 This source checkpoint was published before new verification in Actions run 35285742889. The original recovery directory remains unchanged. Do not reapply the already-applied restoration script or prior backend patches. Fresh verification will be recorded separately; historical test passes do not validate this reconstructed tree.
+
+## Fresh preservation verification
+Actions run 35285742889. Native results: `verification/preservation-2026-09-18/RESULTS.json` and sibling logs.
+- recovery-integrity: exit 0
+- backend: exit 0
+- typecheck: exit 0
+- lint: exit 0
+- build: exit 0
+- browser: exit 1
+
+The frontend lockfile was regenerated from pinned direct dependencies, not recovered from the old filesystem. Browser checks use a disposable loopback server, fictional records and a mocked model. No live provider/model verification, public deployment, outbound enablement, lead contact or main/recovery changes. This remains a WIP checkpoint. Read actual failures before continuing; do not infer full acceptance from baseline or integrity passes.
