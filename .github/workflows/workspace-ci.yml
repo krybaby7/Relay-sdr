@@ -7,13 +7,14 @@ on:
 permissions:
   contents: read
 jobs:
-  baseline:
+  verify:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
       ENABLE_OUTBOUND: 'false'
       OPENAI_API_KEY: ''
       TWILIO_AUTH_TOKEN: ''
+      LANGSMITH_TRACING: 'false'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -21,20 +22,34 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - name: Install test dependencies
-        run: python -m pip install -r requirements-dev.txt
-      - name: Run existing protections
-        run: python -m pytest -q | tee baseline-test-results.txt
-      - name: Package offline verification inputs
-        if: always()
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install and verify existing protections
         run: |
-          mkdir -p verification-inputs/wheels
-          python -m pip download -r requirements-dev.txt -d verification-inputs/wheels
+          set -o pipefail
+          python -m pip install -r requirements-dev.txt
+          python -m pytest -q | tee baseline-test-results.txt
+      - name: Resolve workspace toolchain
+        run: |
+          mkdir -p verification-inputs/wheels verification-inputs/frontend
+          python -m pip download -r requirements-dev.txt langgraph==1.2.11 langgraph-checkpoint-sqlite==3.1.1 ruff -d verification-inputs/wheels
+          python -m pip install langgraph==1.2.11 langgraph-checkpoint-sqlite==3.1.1 ruff
+          python -m pip freeze > verification-inputs/python-resolved.txt
+          cd verification-inputs/frontend
+          npm init -y
+          npm install --save-exact react@19.2.3 react-dom@19.2.3 @json-render/core@0.20.0 @json-render/react@0.20.0 react-grid-layout@2.2.4 zod@4.3.6
+          npm install --save-dev --save-exact typescript@5.9.3 vite@7.3.1 @types/react@19.2.14 @types/react-dom@19.2.3 eslint@9.39.2 typescript-eslint@8.55.0 @eslint/js@9.39.2 globals@17.3.0 @playwright/test@1.62.0
+          npm ls --all --json > dependency-tree.json
+          npm audit --json > audit.json || true
+          tar -czf ../frontend-toolchain.tar.gz .
+          cd ../..
+          rm -rf verification-inputs/frontend
           git archive --format=tar HEAD | gzip > verification-inputs/source.tar.gz
-          cp baseline-test-results.txt verification-inputs/ || true
+          cp baseline-test-results.txt verification-inputs/
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: relay-baseline-verification
+          name: relay-workspace-toolchain
           path: verification-inputs/
           retention-days: 3
