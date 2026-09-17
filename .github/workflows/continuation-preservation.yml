@@ -1,0 +1,106 @@
+name: Preserve interrupted continuation
+on:
+  push:
+    branches: [feat/ai-leads-workspace-continue]
+    paths: [.github/workflows/continuation-preservation.yml]
+permissions:
+  contents: read
+jobs:
+  preserve:
+    if: github.ref == 'refs/heads/feat/ai-leads-workspace-continue'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    env:
+      ENABLE_OUTBOUND: 'false'
+      OPENAI_API_KEY: ''
+      WORKSPACE_API_KEY: ''
+      TWILIO_AUTH_TOKEN: ''
+      LANGSMITH_TRACING: 'false'
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Restore only the exact known unpublished frontend base
+        run: |
+          test "$GITHUB_REF" = 'refs/heads/feat/ai-leads-workspace-continue'
+          python -m py_compile continuation/restore_frontend_checkpoint.py continuation/verify_preservation_checkpoint.py tests/test_workspace.py tests/workspace_browser_server.py
+          python continuation/restore_frontend_checkpoint.py
+          git diff --exit-code -- recovery/ RECOVERY-START-HERE.md
+          python recovery/ai-leads-workspace-v2/verify_github_checkpoint.py
+      - name: Publish native source before longer verification
+        env:
+          SOURCE_TOKEN: ${{ github.token }}
+        run: |
+          test "$GITHUB_REF" = 'refs/heads/feat/ai-leads-workspace-continue'
+          git config user.name 'Relay continuation preservation'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          printf '\n## Preservation milestone: interrupted frontend and tests\n\nOn 2026-09-18, the user requested a durable checkpoint and fresh-chat prompt. Recovered the missing stylesheet, 68-case backend suite, browser fixture, expanded eight-case browser suite and frontend package scripts. Restored five native frontend files using guarded transformations recovered from the interrupted execution record. The original working tree and lockfile did not survive; this is a reconstructed checkpoint, not a byte-identical filesystem recovery or completed release. See `continuation/PRESERVED-FRONTEND.json` for source hashes and replacement counts.\n\nThis source checkpoint was published before new verification in Actions run %s. The original recovery directory remains unchanged. Do not reapply the already-applied restoration script or prior backend patches. Fresh verification will be recorded separately; historical test passes do not validate this reconstructed tree.\n' "$GITHUB_RUN_ID" >> CONTINUATION.md
+          git add frontend/src/App.tsx frontend/src/api.ts frontend/src/catalog.tsx frontend/src/details.tsx frontend/src/types.ts .gitignore continuation/PRESERVED-FRONTEND.json CONTINUATION.md
+          git diff --cached --exit-code -- recovery/ RECOVERY-START-HERE.md
+          git commit -m 'checkpoint: materialize recovered frontend state with provenance hashes'
+          AUTH=$(printf 'x-access-token:%s' "$SOURCE_TOKEN" | base64 -w0)
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $AUTH" push origin HEAD:refs/heads/feat/ai-leads-workspace-continue
+      - name: Install isolated test dependencies
+        run: |
+          python -m pip install -r requirements-dev.txt
+          cd frontend
+          npm install
+          npx playwright install --with-deps chromium
+      - name: Record fresh fixture-only checks including failures
+        run: python continuation/verify_preservation_checkpoint.py
+      - name: Preserve verification results and regenerated build inputs
+        if: always()
+        env:
+          SOURCE_TOKEN: ${{ github.token }}
+        run: |
+          test "$GITHUB_REF" = 'refs/heads/feat/ai-leads-workspace-continue'
+          test -f continuation/PRESERVED-FRONTEND.json || exit 0
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          folder = Path('verification/preservation-2026-09-18')
+          folder.mkdir(parents=True, exist_ok=True)
+          report = folder / 'RESULTS.json'
+          if not report.exists():
+              report.write_text(json.dumps({'run_id': os.environ['GITHUB_RUN_ID'], 'all_executed_checks_passed': False, 'checks': [], 'limitation': 'Verification runner was not reached or completed. Inspect the workflow setup/dependency step; no test success is claimed.'}, indent=2) + '\n')
+          data = json.loads(report.read_text())
+          lines = ['\n## Fresh preservation verification\n', 'Actions run ' + os.environ['GITHUB_RUN_ID'] + '. Native results: `verification/preservation-2026-09-18/RESULTS.json` and sibling logs.\n']
+          for check in data.get('checks', []):
+              lines.append('- ' + check['name'] + ': ' + ('exit ' + str(check['exit_code']) if 'exit_code' in check else check.get('status', 'unknown')) + '\n')
+          if data.get('limitation'):
+              lines.append(data['limitation'] + '\n')
+          lines.append('\nThe frontend lockfile was regenerated from pinned direct dependencies, not recovered from the old filesystem. Browser checks use a disposable loopback server, fictional records and a mocked model. No live provider/model verification, public deployment, outbound enablement, lead contact or main/recovery changes. This remains a WIP checkpoint. Read actual failures before continuing; do not infer full acceptance from baseline or integrity passes.\n')
+          with Path('CONTINUATION.md').open('a') as target:
+              target.writelines(lines)
+          PY
+          git config user.name 'Relay continuation preservation'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add CONTINUATION.md verification/preservation-2026-09-18
+          if test -f frontend/package-lock.json; then git add frontend/package-lock.json; fi
+          if test -d web/workspace; then git add web/workspace; fi
+          git diff --cached --exit-code -- recovery/ RECOVERY-START-HERE.md
+          if ! git diff --cached --quiet; then
+            git commit -m 'checkpoint: save fresh verification results, lockfile and local browser bundle'
+            AUTH=$(printf 'x-access-token:%s' "$SOURCE_TOKEN" | base64 -w0)
+            git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $AUTH" push origin HEAD:refs/heads/feat/ai-leads-workspace-continue
+          fi
+      - name: Do not report a green check when verification failed
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = Path('verification/preservation-2026-09-18/RESULTS.json')
+          assert report.exists(), 'Verification did not complete.'
+          data = json.loads(report.read_text())
+          assert data.get('all_executed_checks_passed') is True, 'WIP checkpoint contains failures or unrun checks; see preserved results.'
+          PY
