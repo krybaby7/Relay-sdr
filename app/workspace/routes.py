@@ -155,6 +155,34 @@ def router(store, worker, admin):
             return {'items': [dict(r) for r in rows[:page_size]], 'page': page, 'has_more': len(rows) > page_size}
         return locked(read)
 
+    @result.get('/leads/{lead_id}/collections/{kind}')
+    def collection(lead_id: str, kind: Literal['notes', 'tasks', 'history'],
+                   page: Annotated[int, Param(ge=1, le=100000)] = 1,
+                   page_size: Annotated[int, Param(ge=1, le=100)] = 25):
+        def read():
+            if not store.get('leads', lead_id):
+                raise KeyError(lead_id)
+            # Fixed projections and identifiers; never interpolate caller-supplied SQL.
+            statements = {
+                'notes': 'SELECT * FROM ws_notes WHERE lead_id=? ORDER BY created_at DESC,id DESC',
+                'tasks': 'SELECT * FROM ws_tasks WHERE lead_id=? ORDER BY created_at DESC,id DESC',
+                'history': "SELECT id,generation,created_at,model,rubric_version,json_extract(data,'$.potential') AS potential FROM ws_assessments WHERE lead_id=? ORDER BY id DESC",
+            }
+            rows = store.conn.execute(statements[kind] + ' LIMIT ? OFFSET ?',
+                                      (lead_id, page_size + 1, (page-1)*page_size)).fetchall()
+            items = queries.json_rows(rows[:page_size]) if kind == 'tasks' else [dict(r) for r in rows[:page_size]]
+            return {'items': items, 'page': page, 'has_more': len(rows) > page_size}
+        return locked(read)
+
+    @result.get('/notes/{note_id}')
+    def note_source(note_id: str, lead_id: str):
+        def read():
+            row = store.conn.execute('SELECT * FROM ws_notes WHERE id=? AND lead_id=?', (note_id, lead_id)).fetchone()
+            if not row:
+                raise KeyError(note_id)
+            return dict(row)
+        return locked(read)
+
     @result.get('/calls/{call_id}')
     def call(call_id: str, offset: Annotated[int, Param(ge=0, le=100000)] = 0,
              limit: Annotated[int, Param(ge=1, le=200)] = 100, include_replaced: bool = False,

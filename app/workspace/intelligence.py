@@ -4,7 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from ..db import now_iso, uid
 from .evidence import resolve_reference, dirty_lead
@@ -12,6 +12,7 @@ from .presentation import audit, Conflict
 from .schema import Extraction
 
 RUBRIC_TOPICS = ('need', 'fit', 'intent', 'authority')
+FACT_TOPICS = (*RUBRIC_TOPICS, 'objection', 'budget', 'decision_process', 'timing', 'procurement', 'proposal', 'decision_needed')
 POTENTIAL_ORDER = {'unassessed': 0, 'limited': 1, 'developing': 2, 'promising': 3, 'strong': 4}
 PRIORITY_ORDER = {'none': 0, 'later': 1, 'qualify': 2, 'review': 3, 'today': 4, 'overdue': 5}
 OPEN_TASKS = ('open', 'needs_review', 'waiting', 'proposed')
@@ -74,7 +75,7 @@ def resolve_due(phrase: str, call_time: str | None, zone: str | None):
         if day in ('today', 'tomorrow'):
             day_value = local.date() + timedelta(days=day == 'tomorrow')
         else:
-            day_value = datetime.strptime(day, '%Y-%m-%d').date()
+            day_value = date.fromisoformat(day)
         hour, minute = int(hours), int(minutes)
         if period:
             if not 1 <= hour <= 12:
@@ -90,19 +91,21 @@ def resolve_due(phrase: str, call_time: str | None, zone: str | None):
         return None, 'invalid_date_or_timezone'
 
 
-def compute_assessment(claims, notes, rubric, *, usable_calls, coverage, previous=None):
-    criteria, conflicts, refs = {}, [], []
-    for topic in RUBRIC_TOPICS:
+def compute_assessment(claims, notes, rubric, *, usable_calls, coverage, previous=None, playbook_approved=True):
+    topics, conflicts = {}, []
+    human_facts = []
+    for topic in FACT_TOPICS:
         related = [c for c in claims if c['topic'] == topic]
         explicit = {c['value'] for c in related if c['interpretation'] == 'explicit' and c['value'] != 'unknown'}
         overrides = [n for n in notes if n['confirmed'] and n['topic'] == topic and n['active']]
         override = overrides[-1] if overrides else None
         if override:
-            value = override['value']
+            value, source = override['value'], 'human_confirmed'
+            human_facts.append({'topic': topic, 'value': value, 'text': override['text'],
+                                'reference': {'note_id': override['id']}})
             if explicit - {value}:
-                conflicts.append({'topic': topic, 'reason': 'New evidence conflicts with a confirmed human correction.',
+                conflicts.append({'topic': topic, 'reason': 'Evidence conflicts with a confirmed human correction.',
                                   'human_note_id': override['id'], 'claim_ids': [c['id'] for c in related]})
-            source = 'human_confirmed'
         elif len(explicit) > 1:
             value, source = 'unknown', 'conflicting_evidence'
             conflicts.append({'topic': topic, 'reason': 'Contradictory evidence retained; clarification required.',
@@ -110,46 +113,48 @@ def compute_assessment(claims, notes, rubric, *, usable_calls, coverage, previou
         else:
             value = next(iter(explicit), 'unknown')
             source = 'extracted_evidence' if explicit else 'unknown'
-        criteria[topic] = {'value': value, 'source': source, 'claim_ids': [c['id'] for c in related],
-                           'human_note_id': override['id'] if override else None}
-        refs.extend(c['id'] for c in related)
+        topics[topic] = {'value': value, 'source': source, 'claim_ids': [c['id'] for c in related],
+                         'human_note_id': override['id'] if override else None}
+    if not playbook_approved:
+        topics['fit'].update(value='unknown', source='playbook_not_approved')
+    criteria = {topic: topics[topic] for topic in RUBRIC_TOPICS}
     known = sum(c['value'] != 'unknown' for c in criteria.values())
     points = sum(rubric['criteria'][k] for k, c in criteria.items() if c['value'] == 'yes')
     approved = rubric['approved']
-    if not approved or usable_calls == 0 or known < 2:
+    if not approved or not playbook_approved or usable_calls == 0 or known < 2:
         potential = 'unassessed'
     elif criteria['fit']['value'] == 'no':
         potential = 'limited'
-    elif criteria['need']['value'] == criteria['fit']['value'] == 'yes':
-        potential = 'strong' if criteria['intent']['value'] == criteria['authority']['value'] == 'yes' else 'promising'
+    elif criteria['need']['value'] == 'yes' and criteria['fit']['value'] == 'yes':
+        potential = 'strong' if criteria['intent']['value'] == 'yes' and criteria['authority']['value'] == 'yes' else 'promising'
     else:
         potential = 'developing'
-    confidence = 'unknown' if not claims else ('well_supported' if known == 4 and not conflicts and coverage['all_chunks_processed']
-                                              else 'partial' if known > 1 else 'limited')
+    confidence = 'unknown' if not claims else (
+        'well_supported' if known == 4 and not conflicts and coverage['all_chunks_processed']
+        and not coverage.get('capture_gaps') else 'partial' if known > 1 else 'limited')
     unknowns = [f'{k.replace("_", " ").capitalize()} is unknown' for k, c in criteria.items() if c['value'] == 'unknown']
-    if not any(c['topic'] == 'budget' and c['value'] != 'unknown' for c in claims):
+    if topics['budget']['value'] == 'unknown':
         unknowns.append('Budget is unknown; it is not zero')
     if not approved:
         unknowns.insert(0, 'Sales rubric needs operator approval; potential remains unassessed')
+    if not playbook_approved:
+        unknowns.insert(0, 'Product playbook needs approval; product fit and potential remain unassessed')
     if not coverage['all_chunks_processed']:
         unknowns.insert(0, 'Analysis coverage is partial; some captured text has not been analyzed')
     if not coverage['transcript_certified_complete']:
         unknowns.append('Capture is not a certified complete transcript of everything spoken')
-    yes_topics = {c['topic'] for c in claims if c['value'] == 'yes' and c['interpretation'] == 'explicit'}
-    for topic in RUBRIC_TOPICS:
-        yes_topics.discard(topic)
-        if criteria[topic]['value'] == 'yes':
-            yes_topics.add(topic)
+    yes_topics = {topic for topic, value in topics.items() if value['value'] == 'yes'}
     stage = 'unassessed' if not claims else ('proposal' if 'proposal' in yes_topics else
              'decision' if 'decision_needed' in yes_topics else 'engaged' if 'intent' in yes_topics else 'qualification')
     return {'potential': potential, 'evidence_points': points, 'points_label': 'Rubric evidence points, not win probability',
-            'criteria': criteria, 'confidence': confidence, 'coverage': coverage, 'stage': stage,
-            'conflicts': conflicts, 'unknowns': unknowns, 'claim_ids': list(dict.fromkeys(refs)),
+            'criteria': criteria, 'topics': topics, 'human_facts': human_facts,
+            'confidence': confidence, 'coverage': coverage, 'stage': stage,
+            'conflicts': conflicts, 'unknowns': unknowns, 'claim_ids': [c['id'] for c in claims],
             'awaiting_proposal': 'proposal' in yes_topics, 'procurement': 'procurement' in yes_topics,
             'needs_decision': 'decision_needed' in yes_topics,
             'objections': [c for c in claims if c['topic'] == 'objection'],
             'claims': claims, 'previous_assessment_id': previous, 'rubric_version': rubric['version'],
-            'rubric_approved': approved, 'assessed_at': now_iso()}
+            'rubric_approved': approved, 'playbook_approved': playbook_approved, 'assessed_at': now_iso()}
 
 
 def eligibility(store, lead):
@@ -235,8 +240,10 @@ def upsert_tasks(store, lead, commitments, calls, *, questions):
 
 
 def add_note(store, lead_id, *, text, topic='note', value='unknown', confirmed=False, supersedes=None, generation):
-    if topic not in (*RUBRIC_TOPICS, 'note', 'timing', 'objection'):
+    if topic not in (*FACT_TOPICS, 'note'):
         raise ValueError('Unsupported correction topic.')
+    if confirmed and topic == 'note':
+        raise ValueError('Choose a factual topic for a confirmed correction; general notes remain unconfirmed sources.')
     if value not in ('yes', 'no', 'unknown') or not isinstance(text, str) or not 1 <= len(text.strip()) <= 5000:
         raise ValueError('Invalid note.')
     with store.lock, store.conn:

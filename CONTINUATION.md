@@ -35,3 +35,9 @@ Actual local results after integration:
 The reconstructed feature is NOT release-verified. Next: frontend style/package/build, full backend resilience and security tests, desktop/mobile browser verification, documentation and PR. Source is preserved through an ordinary UTF-8 reviewed git patch applied to the continuation branch by a branch-restricted workflow; the resulting files are native repository source, and no historical recovery transport is used. No force push or main/recovery changes.
 
 Fresh isolated verification: `python -m compileall -q app` and `python -m pytest tests -q` passed in Actions run 35278025146, on the exact reconstructed source blobs verified above. This is regression verification, not full workspace or browser acceptance.
+
+## Milestone 3: reconciliation hardening
+
+Exact-source backend fixes verified in Actions run 35280381231. Human precedence now applies to procurement, proposal, budget and other supported facts; approved playbook gates fit; practice redaction does not erase real intelligence; provider reads are bounded; terminal capture and generation checks reject stale results; paginated scoped history and note-source APIs are connected.
+
+Local acceptance run before this checkpoint: 155 tests passed (87 baseline + 68 workspace cases), one upstream Starlette/AnyIO deprecation warning. Frontend type-check/lint/build passed; first two Chromium desktop/mobile source-navigation tests passed after fixing initial grid measurement. Expanded browser tests and final frontend publication remain in progress. No live model/provider calls, deployment or lead contact. Recovery remains unchanged.

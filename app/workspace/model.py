@@ -8,8 +8,9 @@ from __future__ import annotations
 import copy
 import json
 import httpx
+import time
 
-PROMPT_VERSION = 'workspace-2026-09-17-v1'
+PROMPT_VERSION = 'workspace-2026-09-18-v2'
 SCHEMA_VERSION = 'workspace-v1'
 
 SYSTEM = '''You are Relay's INTERNAL workspace analyst, not the voice agent.
@@ -98,15 +99,20 @@ class ResponsesModel:
         try:
             with httpx.Client(timeout=self.config.workspace_timeout, transport=self.transport,
                               follow_redirects=False, trust_env=False) as client:
-                response = client.post('https://api.openai.com/v1/responses', json=body,
-                                       headers={'Authorization': 'Bearer ' + self.config.workspace_key})
-            if response.status_code in (401, 403, 404):
-                raise ModelUnavailable(f'Workspace model access unavailable (HTTP {response.status_code}).')
-            if response.status_code != 200:
-                raise ModelFailure(f'Workspace provider request failed (HTTP {response.status_code}).')
-            if len(response.content) > 512000:
-                raise ModelFailure('Workspace provider response exceeds the application limit.')
-            result = response.json()
+                deadline = time.monotonic() + self.config.workspace_timeout
+                with client.stream('POST', 'https://api.openai.com/v1/responses', json=body,
+                                   headers={'Authorization': 'Bearer ' + self.config.workspace_key}) as response:
+                    if response.status_code in (401, 403, 404):
+                        raise ModelUnavailable(f'Workspace model access unavailable (HTTP {response.status_code}).')
+                    if response.status_code != 200:
+                        raise ModelFailure(f'Workspace provider request failed (HTTP {response.status_code}).')
+                    chunks, size = [], 0
+                    for chunk in response.iter_bytes(chunk_size=8192):
+                        size += len(chunk)
+                        if size > 512000 or time.monotonic() > deadline:
+                            raise ModelFailure('Workspace provider response exceeded the size or time limit.')
+                        chunks.append(chunk)
+                    result = json.loads(b''.join(chunks))
             if result.get('status') != 'completed':
                 raise ModelFailure('Workspace provider returned an incomplete response; no changes published.')
             parts = [part for item in result.get('output', []) if item.get('type') == 'message'

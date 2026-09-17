@@ -5,6 +5,7 @@ HTML, arbitrary JSON patch, or permission field in this document.
 """
 from __future__ import annotations
 
+import math
 from typing import Annotated, Literal, Union
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -28,10 +29,12 @@ class Closed(BaseModel):
 class Filter(Closed):
     field: Annotated[str, Field(max_length=64)]
     op: Literal['eq', 'contains', 'in', 'unknown'] = 'eq'
-    value: str | bool | int | list[str] | None = None
+    value: str | bool | int | float | list[str] | None = None
 
     @model_validator(mode='after')
     def bounded(self):
+        if isinstance(self.value, float) and not math.isfinite(self.value):
+            raise ValueError('Filter numbers must be finite.')
         if self.field not in FILTERS and not self.field.startswith('cf_'):
             raise ValueError('Unsupported filter field.')
         if self.op == 'in' and (not isinstance(self.value, list) or len(self.value) > 20):
@@ -145,6 +148,13 @@ class Workspace(Closed):
         all_view = next(v for v in self.views if v.id == 'all')
         if all_view.query.filters or all_view.query.search or all_view.query.scope != 'real':
             raise ValueError('All leads must remain unfiltered; duplicate it to filter.')
+        for view in self.views:
+            for bp in COLS:
+                entries = getattr(view.layouts, bp)
+                for n, a in enumerate(entries):
+                    for b in entries[n + 1:]:
+                        if a.x < b.x + b.w and a.x + a.w > b.x and a.y < b.y + b.h and a.y + a.h > b.y:
+                            raise ValueError('Widgets must not overlap; move or resize them into free space.')
         practice = next(v for v in self.views if v.id == 'practice')
         if practice.query.scope != 'practice':
             raise ValueError('Practice navigation must remain isolated from real leads.')

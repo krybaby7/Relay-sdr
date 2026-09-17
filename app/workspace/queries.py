@@ -25,7 +25,7 @@ def compile_query(store, query: Query):
     """Return a fixed SQL projection, predicates, and bound arguments.
 
     Day boundaries are in the operator workspace timezone (Africa/Cairo by
-    default), while due_at values are UTC. Permission recorded is not preflight.
+    when explicitly configured), while due_at values are UTC. Permission recorded is not preflight.
     """
     tz = ZoneInfo(store.get_setting('ws_timezone') or 'UTC')
     now = datetime.now(timezone.utc)
@@ -69,7 +69,8 @@ def compile_query(store, query: Query):
              ELSE 'none' END AS priority,
         CASE WHEN analysis_status IN ('failed','waiting_configuration') OR generation>assessed_generation AND assessment IS NOT NULL
              OR json_array_length(json_extract(assessment,'$.conflicts'))>0
-             OR json_extract(assessment,'$.coverage.all_chunks_processed')=0 THEN 1 ELSE 0 END AS needs_review,
+             OR json_extract(assessment,'$.coverage.all_chunks_processed')=0
+             OR json_array_length(json_extract(assessment,'$.coverage.capture_gaps'))>0 THEN 1 ELSE 0 END AS needs_review,
         coalesce(json_extract(assessment,'$.unknowns'),'[]') AS unknowns,
         coalesce(json_extract(assessment,'$.objections'),'[]') AS objection,
         coalesce((SELECT json_extract(t.data,'$.wording') FROM ws_tasks t WHERE t.lead_id=base.id
@@ -216,8 +217,8 @@ def calls_for_query(store, query, *, page=1, page_size=25):
     rows = store.conn.execute(filtered + f'''SELECT ci.*,p.name,p.company,cap.segment_count,cap.dropped,cap.close_observed
       FROM ws_call_index ci LEFT JOIN selected p ON p.id=ci.lead_id JOIN ws_capture cap ON cap.call_id=ci.call_id
       WHERE (p.id IS NOT NULL AND {scope}){extra} ORDER BY ci.created_at DESC LIMIT ? OFFSET ?''',
-      (*params, page_size, (page - 1) * page_size)).fetchall()
-    return {'items': [dict(r) for r in rows], 'page': page, 'has_more': len(rows) == page_size}
+      (*params, page_size + 1, (page - 1) * page_size)).fetchall()
+    return {'items': [dict(r) for r in rows[:page_size]], 'page': page, 'has_more': len(rows) > page_size}
 
 
 def lead_detail(store, lead_id):
@@ -227,10 +228,11 @@ def lead_detail(store, lead_id):
     head = dict(store.conn.execute('SELECT * FROM ws_heads WHERE lead_id=?', (lead_id,)).fetchone())
     row = store.conn.execute('SELECT * FROM ws_assessments WHERE id=?', (head['assessment_version'],)).fetchone()
     assessment = dict(row) | {'data': json.loads(row['data'])} if row else None
-    notes = [dict(r) for r in store.conn.execute('SELECT * FROM ws_notes WHERE lead_id=? ORDER BY created_at', (lead_id,))]
+    notes = [dict(r) for r in store.conn.execute('SELECT * FROM ws_notes WHERE lead_id=? ORDER BY created_at DESC,id DESC LIMIT 50', (lead_id,))]
     tasks = json_rows(store.conn.execute('SELECT * FROM ws_tasks WHERE lead_id=? ORDER BY created_at DESC LIMIT 200', (lead_id,)))
     eligible = eligibility(store, lead)
-    rank, reason = priority(tasks, eligible, assessment['data'] if assessment else None, zone=store.get_setting('ws_timezone') or 'UTC')
+    ranking_tasks = [dict(r) for r in store.conn.execute('SELECT kind,status,min(due_at) AS due_at FROM ws_tasks WHERE lead_id=? GROUP BY kind,status', (lead_id,))]
+    rank, reason = priority(ranking_tasks, eligible, assessment['data'] if assessment else None, zone=store.get_setting('ws_timezone') or 'UTC')
     calls = [dict(r) for r in store.conn.execute('SELECT ci.*,cap.segment_count,cap.dropped,cap.close_observed '
               'FROM ws_call_index ci JOIN ws_capture cap ON ci.call_id=cap.call_id '
               'WHERE ci.lead_id=? ORDER BY ci.created_at DESC LIMIT 50', (lead_id,))]

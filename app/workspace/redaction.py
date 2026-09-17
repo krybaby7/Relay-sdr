@@ -47,6 +47,9 @@ def redact(store, ident, *, revision, reason, confirm):
     with store.lock, store.conn:
         row = source(store, ident)
         call_id, lead_id = row['call_id'], row['lead_id']
+        call = store.get('calls', call_id, include_transcript=False)
+        lead = store.get('leads', lead_id) if lead_id else None
+        real_lead_id = lead_id if call['kind'] == 'twilio' and lead and not lead.get('sample') else None
         cap = evidence.metadata(store, call_id)
         if cap['revision'] != revision:
             raise presentation.Conflict('Source changed; refresh before redacting.')
@@ -61,7 +64,7 @@ def redact(store, ident, *, revision, reason, confirm):
         evidence.flag(store, call_id, 'operator_redaction')
         # Do not risk retaining the removed quote in an older model interpretation.
         # Preserve job/task identity and workflow history, not sensitive derivations.
-        if lead_id:
+        if real_lead_id:
             store.conn.execute('DELETE FROM ws_facts WHERE lead_id=?', (lead_id,))
             store.conn.execute('DELETE FROM ws_assessments WHERE lead_id=?', (lead_id,))
             store.conn.execute("UPDATE ws_heads SET assessment_version=NULL,assessed_generation=-1,status='unassessed' WHERE lead_id=?", (lead_id,))
@@ -72,16 +75,16 @@ def redact(store, ident, *, revision, reason, confirm):
                 status = task['status'] if task['status'] in ('done', 'cancelled') else 'needs_review'
                 store.conn.execute('UPDATE ws_tasks SET data=?,status=?,due_at=NULL,version=version+1,updated_at=? WHERE id=?',
                                    (json.dumps(safe), status, now_iso(), task['id']))
-        affected = [r['id'] for r in store.conn.execute("SELECT id FROM ws_jobs WHERE lead_id=? OR kind='command'", (lead_id,))]
+        affected = [r['id'] for r in store.conn.execute("SELECT id FROM ws_jobs WHERE lead_id=? OR kind='command'", (real_lead_id,))] if real_lead_id else []
         for job_id in affected:
             store.conn.execute('DELETE FROM ws_drafts WHERE job_id=?', (job_id,))
+            store.conn.execute('UPDATE ws_jobs SET result=NULL WHERE id=?', (job_id,))
             store.conn.execute("UPDATE ws_jobs SET status='superseded',error='Source redacted; run invalidated.',result=NULL WHERE id=? AND status!='succeeded'", (job_id,))
             store.conn.execute('INSERT OR IGNORE INTO ws_checkpoint_purge VALUES(?)', (job_id,))
             store.conn.execute('DELETE FROM ws_proposals WHERE job_id=?', (job_id,))
         store.conn.execute('DELETE FROM ws_extractions WHERE call_id=? OR call_id=? OR call_id IN (SELECT call_id FROM ws_call_index WHERE lead_id=?)',
-                           (call_id, 'notes:' + (lead_id or ''), lead_id))
+                           (call_id, 'notes:' + (real_lead_id or ''), real_lead_id))
         # Source-derived in-call summaries and requests may contain the redacted text.
-        call = store.get('calls', call_id, include_transcript=False)
         store.patch('calls', call_id, summary='', next_step='', requests=[], end_reason='',
                     content_redacted=True)
         store.conn.execute('DELETE FROM tools WHERE key LIKE ? ESCAPE \'\\\'', (call_id.replace('_', '\\_') + ':%',))
@@ -99,9 +102,9 @@ def redact(store, ident, *, revision, reason, confirm):
         store.conn.execute('INSERT INTO ws_revisions VALUES(?,?,?,?,?)',
                            (version, 'human', 'Source redaction invalidated in-flight plans; layout retained.', now_iso(), spec))
         presentation.audit(store, 'human', 'source_redaction', call_id, reason,
-                           {'logical_source': ident, 'revisions_removed': len(related), 'derived_lead_intelligence_removed': bool(lead_id)})
+                           {'logical_source': ident, 'revisions_removed': len(related), 'derived_lead_intelligence_removed': bool(real_lead_id)})
         result = {'status': 'redacted', 'revision': evidence.metadata(store, call_id)['revision'],
-                  'notice': 'Derived local intelligence was invalidated. Independent notes, backups and external deliveries are not erased by this operation.'}
+                  'notice': 'Captured source revisions and affected intelligence/cache/task copies were removed. Independent notes, saved presentation labels, backups and external deliveries require separate review.'}
     # SQLite secure_delete is enabled. Checkpoint WAL where possible, outside a transaction.
     with store.lock:
         store.conn.execute('PRAGMA wal_checkpoint(PASSIVE)')

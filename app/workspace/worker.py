@@ -15,6 +15,7 @@ from datetime import datetime, timezone, timedelta
 from typing import TypedDict
 
 from langgraph.graph import StateGraph, START, END
+from langsmith import tracing_context
 from langgraph.checkpoint.sqlite import SqliteSaver
 
 from ..db import uid, now_iso
@@ -155,8 +156,12 @@ class WorkspaceWorker:
         with self.store.lock, self.store.conn:
             rows = self.store.conn.execute('''SELECT h.* FROM ws_heads h JOIN ws_lead_index l ON l.lead_id=h.lead_id
               WHERE l.sample=0 AND h.generation>h.assessed_generation AND h.changed_at<?
+              AND (EXISTS(SELECT 1 FROM ws_call_index c WHERE c.lead_id=h.lead_id AND c.kind='twilio'
+                    AND c.status IN ('completed','failed','busy','no-answer','canceled','interrupted'))
+                   OR EXISTS(SELECT 1 FROM ws_notes n WHERE n.lead_id=h.lead_id AND n.active=1))
               AND NOT EXISTS(SELECT 1 FROM ws_call_index c JOIN ws_capture cap ON c.call_id=cap.call_id
-                WHERE c.lead_id=h.lead_id AND c.kind='twilio' AND (cap.bridge_active=1 OR cap.last_event>?))
+                WHERE c.lead_id=h.lead_id AND c.kind='twilio' AND (cap.bridge_active=1 OR cap.last_event>?
+                  OR c.status NOT IN ('completed','failed','busy','no-answer','canceled','interrupted')))
               ORDER BY h.changed_at LIMIT 20''', (now - self.config.workspace_settle_seconds,
                                                  now - self.config.workspace_settle_seconds)).fetchall()
             rubric = self.store.get_setting('ws_rubric')
@@ -205,7 +210,8 @@ class WorkspaceWorker:
                 return True
             snapshot = self.graph.get_state(config)
             input_state = None if snapshot.next else {'job_id': job['id'], 'phase': 'queued'}
-            self.graph.invoke(input_state, config)
+            with tracing_context(enabled=False):
+                self.graph.invoke(input_state, config)
             self._finish(job, 'succeeded')
         except ChunkContinuation:
             with self.store.lock, self.store.conn:
@@ -269,6 +275,9 @@ class WorkspaceWorker:
 
     def save_draft(self, job, data):
         with self.store.lock, self.store.conn:
+            status = self.store.conn.execute('SELECT status FROM ws_jobs WHERE id=?', (job['id'],)).fetchone()
+            if not status or status['status'] == 'superseded':
+                raise StaleRun()
             if job['lead_id']:
                 self.assert_fresh(job)
             self.store.conn.execute('INSERT OR REPLACE INTO ws_drafts VALUES(?,?)', (job['id'], json.dumps(data)))
@@ -418,7 +427,8 @@ class WorkspaceWorker:
                 draft = self.draft(job)
                 rubric = self.store.get_setting('ws_rubric')
             draft['assessment'] = intelligence.compute_assessment(draft['claims'], draft['notes'], rubric,
-                usable_calls=draft['usable_calls'], coverage=draft['coverage'], previous=draft['previous_assessment_id'])
+                usable_calls=draft['usable_calls'], coverage=draft['coverage'], previous=draft['previous_assessment_id'],
+                playbook_approved=bool(self.store.get_setting('playbook').get('approved')))
             draft['assessment']['questions'] = draft['questions']
             self.save_draft(job, draft)
         return {'phase': 'computed'}

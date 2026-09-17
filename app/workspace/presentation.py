@@ -149,6 +149,8 @@ def transform(store, before, changes: ChangeSet, actor):
             if key not in view['widgets']:
                 raise ValueError('Widget is not in this view.')
             if typ == 'configure_widget':
+                if any(v['locked'] and key in v['widgets'] for v in spec['views']):
+                    raise Locked('Unlock every view sharing this widget before changing its configuration.')
                 if op['widget']['kind'] != spec['widgets'][key]['kind']:
                     raise ValueError('Remove and add to change widget type.')
                 spec['widgets'][key] = op['widget']

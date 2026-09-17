@@ -57,7 +57,15 @@ class Store:
             return json.loads(row[0]) if row else None
     def setting(self, key, data):
         with self.lock, self.conn:
+            previous = self.get_setting(key)
             self.conn.execute('INSERT OR REPLACE INTO settings VALUES (?,?)', (key, json.dumps(data)))
+            if key == 'playbook' and previous != data and self.conn.execute(
+                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='ws_heads'").fetchone():
+                import time
+                from .workspace.presentation import audit
+                self.conn.execute('UPDATE ws_heads SET generation=generation+1,changed_at=? WHERE lead_id IN '
+                                  '(SELECT lead_id FROM ws_lead_index WHERE sample=0)', (time.time(),))
+                audit(self, 'human', 'playbook', None, 'Approved product context changed; affected assessments require reconciliation.')
     def all(self, table, *, include_transcript=False):
         assert table in ('leads', 'calls', 'outbox')
         with self.lock:
@@ -95,11 +103,16 @@ class Store:
             if table == 'calls' and any(before.get(k) != data.get(k) for k in
                     ('status', 'ended_at', 'requests', 'outcome', 'summary', 'next_step')):
                 evidence.dirty_call(self, id)
+                from .workspace.presentation import audit
+                audit(self, 'system', 'call_updated', id, 'Captured call lifecycle or outcome changed.')
             elif table == 'leads' and any(before.get(k) != data.get(k) for k in
                     ('notes', 'company', 'timezone')):
                 if before.get('notes') != data.get('notes'):
                     self._legacy_note(id, data.get('notes', ''))
                 evidence.dirty_lead(self, id)
+            if table == 'leads' and before != data:
+                from .workspace.presentation import audit
+                audit(self, 'human', 'lead_updated', id, 'Lead record updated; contact policy remains enforced separately.')
             return self._hydrate(table, data, False)
     def add_lead(self, data, sample=False):
         with self.lock, self.conn:
@@ -111,6 +124,8 @@ class Store:
             if data['opted_out']: data.update(status='do_not_call', consent=False)
             self.conn.execute('INSERT INTO leads VALUES (?,?,?)', (data['id'], data['phone'], json.dumps(data)))
             self._legacy_note(data['id'], data.get('notes', ''))
+            from .workspace.presentation import audit
+            audit(self, 'human', 'lead_created', data['id'], 'Fictional sample created.' if sample else 'Lead record created, initially unassessed.')
             return data, True
     def _legacy_note(self, lead_id, text):
         # Keep legacy UI notes as explicit, unconfirmed human source revisions.
@@ -131,6 +146,8 @@ class Store:
             if row:
                 data = json.loads(row[0]); data.update(opted_out=True, consent=False, status='do_not_call')
                 self.conn.execute('UPDATE leads SET data=? WHERE phone=?', (json.dumps(data), phone))
+                from .workspace.presentation import audit
+                audit(self, 'system', 'suppression', data['id'], 'Permanent do-not-call suppression applied.')
     def new_call(self, kind, lead_id=None, request_id=None):
         with self.lock, self.conn:
             if request_id:
