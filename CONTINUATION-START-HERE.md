@@ -1,80 +1,83 @@
-# Relay SDR — resume the preserved continuation
+# Relay SDR — implemented AI-managed leads workspace
 
-Updated 2026-09-18. Work on `feat/ai-leads-workspace-continue`, not the older `feat/ai-leads-workspace` branch and not from the recovery overlay alone.
+Updated 2026-09-18. The implementation is on `feat/ai-leads-workspace-continue`.
+The original interrupted-checkpoint failures have been resolved and the broader
+manual/AI shared-workspace flow has been implemented and verified. This is a
+single-operator local pilot, not a production calling release or live-provider
+certification.
 
-This is a durable, partially verified implementation checkpoint, **NOT a completed release**. The user requested preservation after an interrupted implementation so that a fresh chat can continue without an archive upload or the previous conversation.
+## Current native implementation
 
-## Read completely before continuing
+Read `README.md`, `docs/WORKSPACE-ARCHITECTURE.md`,
+`docs/WORKSPACE-ACCEPTANCE.md` and `CONTINUATION.md`. Source is already at native
+application paths, with compiled assets under `web/workspace/`. The complete
+original scope and security requirements remain authoritative at:
 
-Use the connected GitHub tools and the continuation branch explicitly. Read this file, `CONTINUATION.md`, and `RECOVERY-START-HERE.md`. Then read the complete original files under `recovery/ai-leads-workspace-v2/`:
+`recovery/ai-leads-workspace-v2/requirements/Relay_SDR_AI_Leads_Workspace_Implementation_Prompt.md`
 
-- `RECOVERY.md`
-- `RESUME.md`
-- `GITHUB-PRESERVATION.json`
-- `requirements/Relay_SDR_AI_Leads_Workspace_Implementation_Prompt.md`
+Do not reconstruct or reapply the older restoration overlays, `02-core-*.patch`,
+`03-backend.patch`, or `restore_frontend_checkpoint.py`. Historical recovery
+missing-work lists and their failed browser reports describe earlier versions,
+not the current code. The original handoff is preserved in Git history at
+`37d5c3a25c4173df8371cd11ba99a54325fad972`.
 
-The full original implementation brief is authoritative for product scope, architecture, three-agent permission boundaries, security, acceptance tests and final delivery. The old recovery missing-work list predates the continuation; inspect current native source before reconstructing anything already implemented.
+## Latest complete clean verification
 
-## Durable checkpoints
+Actual source tested: `de7c04b2ed0199f072e66ac14469f705210f0c95`.
+Actions run: https://github.com/krybaby7/Relay-sdr/actions/runs/35326541860
 
-Repository: https://github.com/krybaby7/Relay-sdr
+- Recovery integrity passed; the original recovery directory is unchanged.
+- Backend: **169 passed**, one upstream Starlette/AnyIO deprecation warning.
+- Frontend typecheck, lint and production build passed.
+- Shared keyboard/pointer geometry unit tests: **8 passed**.
+- Desktop/mobile Chromium browser suite: **22 passed**, zero retries/skips.
 
-- Pre-preservation backend/hardening: `e40a054f1221a282876f6528383074830458fa90`.
-- Restored native frontend checkpoint: `ce62c08da4c0eafdf1bfc985c341a946d4044e07`.
-- Published verification logs, regenerated lockfile and compiled workspace bundle: `ab26adeaefa1c955d2233e6760e362198a64059b`.
-- Recovery branch: `recovery/ai-leads-workspace-2026-09-17` at `c0c35ddfb9d23596d492a41a18c79587b1b031b0`.
-- Older `feat/ai-leads-workspace`: `19c4c091a98f55c63433d9bc405f5b1303191b28`.
-- Main observed unchanged: `22f69c92ecfe0c690362947351b3703913d7b379`.
+The verified checkout was clean. Exact commands, source-file hashes, exit codes,
+logs and actual fictional-data screenshots are committed under
+`verification/acceptance-2026-09-18/`. Prefer the `*-rendered-overview.png`
+screenshots, captured after explicit non-overlap and viewport-bound checks.
+The previous 19/22 clean-run failure and its diagnostics remain in Git history
+at `df36ce182c20873392a22e9a34560b8732defa0c`; tests were synchronized with real
+UI readiness, not skipped or weakened. Later documentation/CI housekeeping
+commits do not change the application source tested above.
 
-Inspect current remote branches before writing; these are anchors, not an instruction to reset newer work. Handoff-only commits may follow the verified source checkpoint.
+Routine verification is `.github/workflows/workspace-ci.yml`, which uses the
+committed dependency resolution and runs `scripts/verify_workspace.py`. It
+builds native assets before browser tests. It does not run restoration scripts.
 
-## What is now preserved as native source
+## Local operation and verification
 
-The continuation already contains the original 22 recovered files plus authenticated workspace routes, configuration and worker lifecycle, Store/live capture integration, source indexing and revisions, generation checks, strict provider schemas, resumable analysis, human correction precedence, practice-redaction isolation, bounded scoped history and backend reconciliation hardening.
+Follow README for Python installation, private configuration and the workspace
+token. Run `python run.py`, then open the printed loopback address and `/leads`.
+Manual operation does not need a model key or Node development server. Optional
+reasoning has an explicit independent server-side key/model and remains disabled
+until configured. Keep outbound calling disabled.
 
-This preservation added the missing responsive stylesheet; restored late changes in `frontend/src/App.tsx`, `api.ts`, `catalog.tsx`, `details.tsx` and `types.ts`; and saved `frontend/package.json`, the regenerated `frontend/package-lock.json`, the compiled bundle under `web/workspace/`, `tests/test_workspace.py` (68 workspace cases), `tests/workspace_browser_server.py`, `frontend/playwright.config.ts` and `frontend/e2e/workspace.spec.ts` (eight desktop/mobile cases).
+For verification, install `requirements-dev.txt`, run `npm ci` in `frontend/`,
+install Chromium with Playwright, then run:
 
-Late frontend changes include actual mounted-canvas width measurement, source-note navigation, paginated detail/history and calls/tasks widgets, active-view context, human-correction controls, source redaction, request cancellation/identity checks and preservation of local query state during shared updates. These changes are restored code, not a claim of complete behavioral acceptance.
+```bash
+python scripts/verify_workspace.py --output verification/local
+```
 
-The previous runtime's complete working tree and final lockfile did not survive. Late source was reconstructed from surviving source-writing execution records and checked against five exact known base blobs. `continuation/PRESERVED-FRONTEND.json` records base/result blob hashes, SHA-256 hashes and replacement matches; all recorded replacement patterns matched. This is not a byte-identical recovery of the unavailable final filesystem. The lockfile was regenerated from pinned direct dependencies.
+All recorded verification uses mocked providers and fictional loopback fixtures.
+Live model reasoning quality, live voice/PSTN, physical mobile devices,
+Safari/Firefox, broad load tests, security/compliance certification, comprehensive
+retention operations and multi-process use are not established.
 
-The native files are already restored. **Do not reapply** `continuation/02-core-*.patch`, `continuation/03-backend.patch`, or `continuation/restore_frontend_checkpoint.py`. The old materialization/hardening/preservation workflows are one-shot restoration mechanisms, not routine CI. Continue by editing current application files directly.
+## Non-destructive continuation boundaries
 
-## Fresh verification of this exact reconstructed source
+Inspect current remote branches/commits before any new work; all hashes above are
+anchors, never reset targets. `main` was preserved at
+`22f69c92ecfe0c690362947351b3703913d7b379`. Do not merge, force-push, deploy,
+enable outbound calling, contact leads, send messages, approve external webhooks
+or change recording settings without separate authorization.
 
-Actions run: https://github.com/krybaby7/Relay-sdr/actions/runs/35285742889
-
-The source under test was `ce62c08da4c0eafdf1bfc985c341a946d4044e07`; generated assets, the lockfile and reports were subsequently committed at `ab26adeaefa1c955d2233e6760e362198a64059b`.
-
-Native results are in `verification/preservation-2026-09-18/RESULTS.json`, with sibling command logs, `browser-results.json` and the three failure `*-error-context.md` files.
-
-- `python recovery/ai-leads-workspace-v2/verify_github_checkpoint.py`: passed. Recovery integrity only, not application correctness.
-- `python -m pytest tests -q`: **155 passed, 1 warning in 14.99s** (87 baseline plus 68 workspace cases). Warning: upstream Starlette/AnyIO deprecated alias.
-- In `frontend/`, `npm run typecheck`, `npm run lint`, and `npm run build`: all passed.
-- In `frontend/`, `npm run test:e2e`: **5 passed, 3 failed**. The workflow deliberately reports failure rather than presenting this as green.
-
-The five browser passes cover desktop and mobile source navigation/pagination and search/practice/busy-state checks, plus desktop typed-field/human-correction/source-note navigation. The three failures are:
-
-1. Desktop manual-view/layout/pin/model-update sequence: exact button name `Agent-organized leads` was not found. The historical rendered accessible name included a count (`Agent-organized leads 31`). Actual tab markup uses `boot.spec.views.map(saved => <button key={saved.id} ...>)`; a previous attempted `v.id` replacement was a no-op. Fix the actual accessibility contract or appropriately scoped test locator, then exercise the remaining sequence.
-2. Mobile manual-view/layout sequence: timed out locating the exact `Organize` button. Inspect the mobile command button and its accessible name; do not just skip the test.
-3. Mobile typed-field/human-correction sequence: the login helper timed out waiting for `.leads-table`. Root cause was not established during preservation; inspect the retained error context and investigate mobile rendering, state and test isolation.
-
-Do not assume these failures are only cosmetic selectors or the only remaining bugs. Layout/resize/pin persistence steps beyond the failed checkpoints have not all been reached in this fresh run. Read the full brief and add any missing acceptance coverage.
-
-Tests used real local SQLite/application routes with mocked model/provider behavior and fictional records on a disposable loopback server. No live model quality, real telephony or production-data behavior was verified. There was no public deployment, outbound enablement or lead contact. Paths to screenshot/trace attachments in browser logs refer to temporary runner output and are not guaranteed repository files; regenerate them locally. Restoration does not depend on those images or an expiring Actions artifact.
-
-## Immediate continuation
-
-Inspect current heads, read the full brief and current code, then rerun integrity and test checks. Fix the three recorded browser failures and continue the complete manual/AI shared-workspace acceptance flow on desktop and mobile, including actual resize/drag, pin/lock persistence, reload and background updates. Verify existing safeguards and reconstruct only genuinely missing integration. Complete documentation, remaining acceptance/security/resilience tests and the original delivery requirements, including a pull request without merging.
-
-For a fresh checkout, install root `requirements-dev.txt`; run `npm ci` in `frontend/`, install Chromium with Playwright, then run the commands above. Build before the browser suite because its disposable server serves `web/workspace/`. `continuation/verify_preservation_checkpoint.py` is a diagnostic runner that writes reports even when a check fails; its process success does NOT mean its checks passed. Read `RESULTS.json` and each command exit code. Do not reuse stale build outputs or historical test success as new verification.
-
-Commit and push useful milestones early, especially before lengthy browser work. Update `CONTINUATION.md` with exact source anchors, commands, outcomes, known limitations and next steps. Do not leave new source only in a temporary runtime.
-
-## Authority and boundaries
-
-The user authorizes incremental commits/pushes on the implementation branch or a non-destructive continuation branch and opening a pull request. Do not merge, force-push over newer work, change main, deploy publicly, enable outbound calling, place real calls, contact leads, send messages, approve external webhooks or change recording settings. Preserve authentication, consent, suppression, calling policy, provider callbacks/contracts, unknown-call handling and practice isolation.
-
-Keep call evidence, cumulative lead intelligence and shared versioned workspace presentation separate. The orchestrator must apply validated persisted changes through the same specification used by manual controls, not arbitrary UI/code or fabricated records. Follow the original brief's complete three-agent security model.
-
-Preserve `recovery/ai-leads-workspace-v2/` unchanged. Exclude secrets, `.env`, `.data`, runtime databases, real transcripts/contact exports and dependency caches. Use native GitHub files directly. Do not require a user-uploaded ZIP, transport decoding, an old artifact, or previous chat history. Continue implementation rather than restarting, brainstorming, or stopping at a plan.
+Keep source evidence, cumulative lead intelligence and versioned presentation
+separate. AI and manual operations share the same backend-validated specification.
+Preserve the three-agent permission boundaries, authentication, consent,
+suppression, provider contracts/callbacks, unknown-call handling and practice
+isolation. Preserve `recovery/ai-leads-workspace-v2/` unchanged and exclude
+credentials, `.env`, `.data`, runtime databases, real transcripts/contact exports
+and dependency caches from source commits. No uploaded archive or previous chat
+is required.
