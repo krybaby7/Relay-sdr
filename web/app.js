@@ -54,7 +54,7 @@ const activeStatus = status => ['created','dialing','queued','initiated','ringin
 function pageHead(title, subtitle, actions='', eyebrow='WORKSPACE') { return `<div class="page-head"><div><span class="eyebrow">${esc(eyebrow)}</span><h1>${esc(title)}</h1><p>${esc(subtitle)}</p></div><div class="row">${actions}</div></div>`; }
 function empty(title, sub, action='', name='calls') { return `<div class="empty"><div class="empty-icon">${icon(name)}</div><strong>${esc(title)}</strong><p>${esc(sub)}</p>${action}</div>`; }
 function renderNav(){
- $('#nav').innerHTML=Object.entries(titles).map(([id,title])=>`<a class="nav-item ${tab===id?'active':''}" href="#${id}" ${tab===id?'aria-current="page"':''}>${icon(id)}${esc(title)}${id==='leads'?`<span class="count">${data?.leads.length || 0}</span>`:''}</a>`).join('');
+ $('#nav').innerHTML=Object.entries(titles).map(([id,title])=>`<a class="nav-item ${tab===id?'active':''}" href="${id==='leads'?'/leads':'#'+id}" ${tab===id?'aria-current="page"':''}>${icon(id)}${esc(title)}${id==='leads'?`<span class="count">${data?.leads.length || 0}</span>`:''}</a>`).join('');
  $('#breadcrumb').textContent=titles[tab];
  $('#outbound-chip').textContent=data.config.outbound_enabled?'OUTBOUND ENABLED':'OUTBOUND OFF';
  $('#outbound-chip').className='chip '+(data.config.outbound_enabled?'amber':'');

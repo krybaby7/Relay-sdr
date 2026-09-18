@@ -1,0 +1,31 @@
+
+> relay-leads-workspace@1.0.0 test:e2e
+> playwright test
+
+
+Running 22 tests using 1 worker
+
+  ✓   1 [chromium-desktop] › e2e/acceptance.spec.ts:9:3 › complete shared-workspace acceptance › AI geometry, keyboard reorder, pointer drag/resize, pin and later AI edits persist (10.5s)
+  ✓   2 [chromium-desktop] › e2e/acceptance.spec.ts:94:3 › complete shared-workspace acceptance › suggestions require approval; locked views reject agent and manual changes (8.8s)
+  ✓   3 [chromium-desktop] › e2e/acceptance.spec.ts:132:3 › complete shared-workspace acceptance › columns, board-only pagination, history undo and reset retain records (4.6s)
+  ✓   4 [chromium-desktop] › e2e/acceptance.spec.ts:178:3 › complete shared-workspace acceptance › initial read failure is retryable; model outage leaves manual editing available (6.3s)
+  ✓   5 [chromium-desktop] › e2e/acceptance.spec.ts:200:3 › complete shared-workspace acceptance › competing edits fail atomically and selection evidence clears across practice (4.0s)
+  ✓   6 [chromium-desktop] › e2e/acceptance.spec.ts:230:3 › complete shared-workspace acceptance › all application sections and tab locking remain reachable on small screens (2.9s)
+  ✓   7 [chromium-desktop] › e2e/rendering.spec.ts:4:1 › settled rendered geometry is non-overlapping and fits the viewport (2.7s)
+  ✓   8 [chromium-desktop] › e2e/workspace.spec.ts:29:1 › real rendered workspace loads, navigates and exposes source evidence (4.9s)
+  ✓   9 [chromium-desktop] › e2e/workspace.spec.ts:63:1 › manual views, actual responsive resize, pins, model edits and reload share persisted state (6.6s)
+  ✓  10 [chromium-desktop] › e2e/workspace.spec.ts:116:1 › typed fields, confirmed human corrections and exact human source navigation (4.9s)
+  ✓  11 [chromium-desktop] › e2e/workspace.spec.ts:155:1 › search, empty states and practice remain scoped; busy interaction holds updates (4.3s)
+  ✓  12 [chromium-mobile] › e2e/acceptance.spec.ts:9:3 › complete shared-workspace acceptance › AI geometry, keyboard reorder, pointer drag/resize, pin and later AI edits persist (9.5s)
+  ✓  13 [chromium-mobile] › e2e/acceptance.spec.ts:94:3 › complete shared-workspace acceptance › suggestions require approval; locked views reject agent and manual changes (8.3s)
+  ✓  14 [chromium-mobile] › e2e/acceptance.spec.ts:132:3 › complete shared-workspace acceptance › columns, board-only pagination, history undo and reset retain records (4.2s)
+  ✓  15 [chromium-mobile] › e2e/acceptance.spec.ts:178:3 › complete shared-workspace acceptance › initial read failure is retryable; model outage leaves manual editing available (6.2s)
+  ✓  16 [chromium-mobile] › e2e/acceptance.spec.ts:200:3 › complete shared-workspace acceptance › competing edits fail atomically and selection evidence clears across practice (4.0s)
+  ✓  17 [chromium-mobile] › e2e/acceptance.spec.ts:230:3 › complete shared-workspace acceptance › all application sections and tab locking remain reachable on small screens (2.9s)
+  ✓  18 [chromium-mobile] › e2e/rendering.spec.ts:4:1 › settled rendered geometry is non-overlapping and fits the viewport (2.6s)
+  ✓  19 [chromium-mobile] › e2e/workspace.spec.ts:29:1 › real rendered workspace loads, navigates and exposes source evidence (3.6s)
+  ✓  20 [chromium-mobile] › e2e/workspace.spec.ts:63:1 › manual views, actual responsive resize, pins, model edits and reload share persisted state (6.1s)
+  ✓  21 [chromium-mobile] › e2e/workspace.spec.ts:116:1 › typed fields, confirmed human corrections and exact human source navigation (3.9s)
+  ✓  22 [chromium-mobile] › e2e/workspace.spec.ts:155:1 › search, empty states and practice remain scoped; busy interaction holds updates (4.1s)
+
+  22 passed (2.0m)

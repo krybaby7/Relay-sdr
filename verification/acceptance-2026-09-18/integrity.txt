@@ -1,0 +1,14 @@
+{
+  "original_manifest_sha256": "c6fefb9a8ce312567b66b6687f7a23522adc27e3b2c99c76522b3f104e187ca0",
+  "original_text_payload_hashes_verified": 66,
+  "original_text_files_including_manifest": 67,
+  "original_python_files_parsed": 26,
+  "historical_screenshots_not_published": [
+    "screenshots/workspace-evidence-desktop.png",
+    "screenshots/workspace-first-desktop.png",
+    "screenshots/workspace-third-mobile.png"
+  ],
+  "functional_tests_run": false,
+  "live_model_or_provider_tests_run": false,
+  "note": "Integrity and Python syntax only; not a complete or functionally verified implementation."
+}

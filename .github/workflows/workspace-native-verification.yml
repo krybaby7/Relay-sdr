@@ -1,0 +1,58 @@
+name: Native workspace verification
+on:
+  push:
+    branches: [feat/ai-leads-workspace-continue]
+    paths: ['.github/workflows/workspace-native-verification.yml']
+permissions:
+  contents: read
+jobs:
+  verify-native:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      ENABLE_OUTBOUND: 'false'
+      OPENAI_API_KEY: ''
+      WORKSPACE_OPENAI_API_KEY: ''
+      TWILIO_AUTH_TOKEN: ''
+      LANGSMITH_TRACING: 'false'
+      PYTHONHASHSEED: '0'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Native source and pinned toolchain (no restoration)
+        run: |
+          set -euxo pipefail
+          mkdir -p /tmp/native-inputs/wheels /tmp/native-inputs/logs
+          git rev-parse HEAD > /tmp/native-inputs/SOURCE-COMMIT
+          git bundle create /tmp/native-inputs/native.bundle --all
+          python --version > /tmp/native-inputs/logs/python-version.txt
+          node --version > /tmp/native-inputs/logs/node-version.txt
+          python recovery/ai-leads-workspace-v2/verify_github_checkpoint.py | tee /tmp/native-inputs/logs/integrity.txt
+          python -m pip download -r requirements-dev.txt -d /tmp/native-inputs/wheels
+          python -m pip install -r requirements-dev.txt
+          python -m pip freeze > /tmp/native-inputs/logs/python-packages.txt
+          python -m pytest tests -q | tee /tmp/native-inputs/logs/backend.txt
+          git diff --exit-code -- recovery/ai-leads-workspace-v2
+          cd frontend
+          npm ci
+          npm ls --all --json > /tmp/native-inputs/logs/npm-tree.json
+          npm run typecheck
+          npm run lint
+          npm run build
+          PLAYWRIGHT_BROWSERS_PATH=/tmp/playwright npx playwright install chromium
+          tar -czf /tmp/native-inputs/node-modules.tar.gz node_modules
+          tar -czf /tmp/native-inputs/playwright.tar.gz -C /tmp playwright
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: current-native-workspace-inputs
+          path: /tmp/native-inputs/
+          retention-days: 3

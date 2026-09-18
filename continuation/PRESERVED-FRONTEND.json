@@ -1,0 +1,367 @@
+{
+  "provenance": "Reconstructed from surviving interrupted-run source-writing commands. Not an exact filesystem recovery or a release.",
+  "files": {
+    "frontend/src/App.tsx": {
+      "base_git_blob": "3a9f72d3f33958d32a8f3a543ba8756715f226bf",
+      "restored_git_blob": "6e15f3a662cc92151380d960dfef81b71cc2fa6f",
+      "sha256": "6939109b8c58b175b42db596879facbba13741a1c484aa5a22ae949bd55d4a0e",
+      "bytes": 38408
+    },
+    "frontend/src/api.ts": {
+      "base_git_blob": "b24149283d6068a63653eea335f4faf6a145e556",
+      "restored_git_blob": "73dcb4112692badcfa0eb72a7a197dc45942b5fd",
+      "sha256": "15ba084fde0a82208cef81faef57f8d5ccb9339c74c11689d7cdd8b14679e0d2",
+      "bytes": 2991
+    },
+    "frontend/src/catalog.tsx": {
+      "base_git_blob": "39b0f368371fe941af6792f09f12534491726b42",
+      "restored_git_blob": "eb1fadc45905198edcc95d45d4841686fa72633f",
+      "sha256": "9cedd68817e60b824b24abbc78e5fef7430ee8a000307a0d46abca4079244340",
+      "bytes": 15120
+    },
+    "frontend/src/details.tsx": {
+      "base_git_blob": "2f14b1194512a309c5e9c3a9502ac611efcbbd78",
+      "restored_git_blob": "58b9eebb71fc45e3ab088addc481b4764ab94446",
+      "sha256": "5611c061728dc13e6f16ddbe99b98534b61b568607e29624ea51a0396265ebc0",
+      "bytes": 25220
+    },
+    "frontend/src/types.ts": {
+      "base_git_blob": "1822df910dab8a2d4dcc07a96c05c6053653f432",
+      "restored_git_blob": "f97759982ccba2e9684be8d40fb2d6ed2a8731aa",
+      "sha256": "30c82a14015af9a1655964152615e043c207fb48a9b9a4111953349c1274555b",
+      "bytes": 8373
+    }
+  },
+  "replacements": [
+    {
+      "file": "api.ts",
+      "pattern": "  return response.json() as Promise<T>;",
+      "matches": 1
+    },
+    {
+      "file": "App.tsx",
+      "pattern": "import { CallViewer, LeadDetail }",
+      "matches": 1
+    },
+    {
+      "file": "App.tsx",
+      "pattern": "const [selected, setSelected]",
+      "matches": 1
+    },
+    {
+      "file": "App.tsx",
+      "pattern": "busy.current = detailOpen || !!call || !!dialog || !!layoutDraft || dragging",
+      "matches": 1
+    },
+    {
+      "file": "App.tsx",
+      "pattern": "setBoot(fresh); setViewId(id); setQuery(fresh.spec.views.find(v => v.id === id)!.query);",
+      "matches": 1
+    },
+    {
+      "file": "App.tsx",
+      "pattern": ").then(([records, metrics, tasks, calls, activity]) => { setData",
+      "matches": 1
+    },
+    {
+      "file": "App.tsx",
+      "pattern": "<code>WORKSPACE_OPENAI_API_KEY</code> (or the existing server key)",
+      "matches": 1
+    },
+    {
+      "file": "App.tsx",
+      "pattern": "<LeadDetail detail={detail}",
+      "matches": 1
+    },
+    {
+      "file": "App.tsx",
+      "pattern": "<CallViewer id={call.id}",
+      "matches": 1
+    },
+    {
+      "file": "types.ts",
+      "pattern": "export interface AssessmentData { potential:",
+      "matches": 1
+    },
+    {
+      "file": "types.ts",
+      "pattern": "export interface Segment { id:",
+      "matches": 1
+    },
+    {
+      "file": "details.tsx",
+      "pattern": "import type { Assessment,",
+      "matches": 1
+    },
+    {
+      "file": "details.tsx",
+      "pattern": "export function LeadDetail",
+      "matches": 1
+    },
+    {
+      "file": "details.tsx",
+      "pattern": "  const assessment =",
+      "matches": 1
+    },
+    {
+      "file": "details.tsx",
+      "pattern": "detail.history.length",
+      "matches": 1
+    },
+    {
+      "file": "details.tsx",
+      "pattern": "detail.history.map",
+      "matches": 1
+    },
+    {
+      "file": "details.tsx",
+      "pattern": "detail.tasks.length",
+      "matches": 1
+    },
+    {
+      "file": "details.tsx",
+      "pattern": "detail.tasks.map",
+      "matches": 1
+    },
+    {
+      "file": "details.tsx",
+      "pattern": "detail.calls.length",
+      "matches": 2
+    },
+    {
+      "file": "details.tsx",
+      "pattern": "detail.calls.map",
+      "matches": 1
+    },
+    {
+      "file": "details.tsx",
+      "pattern": "detail.notes.map",
+      "matches": 1
+    },
+    {
+      "file": "details.tsx",
+      "pattern": "{error && <p className=\"error\" role=\"alert\">{error}</p>}",
+      "matches": 2
+    },
+    {
+      "file": "details.tsx",
+      "pattern": "{callsPage.items.length >= 50 && <p className=\"notice\">Showing the 50 most recent linked calls. Use the paginated Calls ",
+      "matches": 1
+    },
+    {
+      "file": "details.tsx",
+      "pattern": "<form onSubmit={e => { e.preventDefault(); void submitNote(); }}>",
+      "matches": 1
+    },
+    {
+      "file": "details.tsx",
+      "pattern": "onChange={e => setTopic(e.target.value)}>{['note','need','fit','intent','authority','timing','objection']",
+      "matches": 1
+    },
+    {
+      "file": "details.tsx",
+      "pattern": "<input type=\"checkbox\" checked={confirmed}",
+      "matches": 1
+    },
+    {
+      "file": "details.tsx",
+      "pattern": "Confirmed corrections take precedence in reconciliation.",
+      "matches": 1
+    },
+    {
+      "file": "details.tsx",
+      "pattern": "      {!!assessment.conflicts.length",
+      "matches": 1
+    },
+    {
+      "file": "details.tsx",
+      "pattern": "    </section> : <Empty title=\"This lead",
+      "matches": 1
+    },
+    {
+      "file": "details.tsx",
+      "pattern": "Save due time</button></div></article>)}</section>",
+      "matches": 1
+    },
+    {
+      "file": "details.tsx",
+      "pattern": "<input type={field.type",
+      "matches": 1
+    },
+    {
+      "file": "details.tsx",
+      "pattern": ".then(setData).catch(e => { if (!controller.signal.aborted)",
+      "matches": 1
+    },
+    {
+      "file": "details.tsx",
+      "pattern": "api<Segment>(`/api/workspace/segments/${reference.segment_id}?lead_id=${data.call.lead_id}`",
+      "matches": 1
+    },
+    {
+      "file": "details.tsx",
+      "pattern": ".then(segment => { if (!segment.active) setReplaced(true); setOffset(Math.max(0, segment.seq - 4)); })",
+      "matches": 1
+    },
+    {
+      "file": "details.tsx",
+      "pattern": "  }, [data, reference]);",
+      "matches": 1
+    },
+    {
+      "file": "details.tsx",
+      "pattern": "rows={4} value={text}",
+      "matches": 1
+    },
+    {
+      "file": "App.tsx",
+      "pattern": "if (ref.note_id) { setDetailOpen(true); setNotice(`Supporting human note: ${ref.note_id}. Open Notes & corrections.`); }",
+      "matches": 1
+    },
+    {
+      "file": "App.tsx",
+      "pattern": "    {call && <CallViewer",
+      "matches": 1
+    },
+    {
+      "file": "App.tsx",
+      "pattern": "close={() => setCall(null)}",
+      "matches": 1
+    },
+    {
+      "file": "App.tsx",
+      "pattern": "setCall(null); setDialog(null);",
+      "matches": 1
+    },
+    {
+      "file": "App.tsx",
+      "pattern": "const busy = useRef(false);",
+      "matches": 1
+    },
+    {
+      "file": "App.tsx",
+      "pattern": "async function openLead(id: string) { setError(''); try { const result = await api<Detail>(`/api/workspace/leads/${id}`)",
+      "matches": 1
+    },
+    {
+      "file": "App.tsx",
+      "pattern": "async function refreshDetail() { if (detailRef.current) setDetail(await api<Detail>(`/api/workspace/leads/${detailRef.cu",
+      "matches": 1
+    },
+    {
+      "file": "details.tsx",
+      "pattern": "const [correction, setCorrection] =",
+      "matches": 1
+    },
+    {
+      "file": "details.tsx",
+      "pattern": "  async function saveCorrection()",
+      "matches": 1
+    },
+    {
+      "file": "details.tsx",
+      "pattern": ">Correct</button></span>",
+      "matches": 1
+    },
+    {
+      "file": "details.tsx",
+      "pattern": "    {correction &&",
+      "matches": 1
+    },
+    {
+      "file": "details.tsx",
+      "pattern": "<label>Topic<select",
+      "matches": 1
+    },
+    {
+      "file": "details.tsx",
+      "pattern": "<label>Criterion answer<select",
+      "matches": 1
+    },
+    {
+      "file": "App.tsx",
+      "pattern": "import type { Layout }",
+      "matches": 1
+    },
+    {
+      "file": "App.tsx",
+      "pattern": "export default function App()",
+      "matches": 1
+    },
+    {
+      "file": "App.tsx",
+      "pattern": "  const { width, containerRef, mounted } = useContainerWidth();\n",
+      "matches": 1
+    },
+    {
+      "file": "App.tsx",
+      "pattern": "<div ref={containerRef} className={`workspace-canvas",
+      "matches": 1
+    },
+    {
+      "file": "App.tsx",
+      "pattern": "{mounted && <Responsive<Breakpoint> width={width}",
+      "matches": 1
+    },
+    {
+      "file": "App.tsx",
+      "pattern": "</Responsive>}",
+      "matches": 1
+    },
+    {
+      "file": "catalog.tsx",
+      "pattern": "createContext, useContext",
+      "matches": 1
+    },
+    {
+      "file": "catalog.tsx",
+      "pattern": "Task, Query }",
+      "matches": 1
+    },
+    {
+      "file": "catalog.tsx",
+      "pattern": "import { date, label }",
+      "matches": 1
+    },
+    {
+      "file": "catalog.tsx",
+      "pattern": "  bootstrap: Bootstrap; data:",
+      "matches": 1
+    },
+    {
+      "file": "catalog.tsx",
+      "pattern": "function Commitments(",
+      "matches": 1
+    },
+    {
+      "file": "catalog.tsx",
+      "pattern": "  if (!ctx.data.tasks.items.length)",
+      "matches": 1
+    },
+    {
+      "file": "catalog.tsx",
+      "pattern": "ctx.data.tasks.items.slice(0, widget.limit).map",
+      "matches": 1
+    },
+    {
+      "file": "catalog.tsx",
+      "pattern": "</p></div>;\n}\nfunction CallTimeline",
+      "matches": 1
+    },
+    {
+      "file": "catalog.tsx",
+      "pattern": "  if (!ctx.data.calls.items.length)",
+      "matches": 1
+    },
+    {
+      "file": "catalog.tsx",
+      "pattern": "ctx.data.calls.items.slice(0, widget.limit).map",
+      "matches": 1
+    },
+    {
+      "file": "App.tsx",
+      "pattern": "const context = data ? { bootstrap:",
+      "matches": 1
+    }
+  ]
+}

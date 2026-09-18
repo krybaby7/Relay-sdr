@@ -1,0 +1,25 @@
+{
+  "mode": "offline DOM with local HTTP API bridge",
+  "checks": [
+    "Token login and safe default status",
+    "Sample import renders three labeled contacts",
+    "Preflight blocks fictional contacts",
+    "Lead form, persistence, and HTML escaping",
+    "CSV partial success and row error feedback",
+    "Playbook save and round-trip values",
+    "Real voice disabled without server key",
+    "Scripted preview appears and remains labeled",
+    "Call review marks meeting as request only",
+    "Call JSON export payload generation",
+    "Simulation does not enter external outbox",
+    "No page-wide overflow on mobile: overview",
+    "No page-wide overflow on mobile: leads",
+    "No page-wide overflow on mobile: lab",
+    "No page-wide overflow on mobile: playbook",
+    "No page-wide overflow on mobile: calls",
+    "No page-wide overflow on mobile: connections",
+    "Mobile-accessible workspace lock clears the UI session",
+    "No browser JavaScript exceptions during the exercised flows"
+  ],
+  "errors": []
+}

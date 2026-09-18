@@ -1,0 +1,13 @@
+
+> relay-leads-workspace@1.0.0 build
+> vite build
+
+[36mvite v7.3.6 [32mbuilding client environment for production...[36m[39m
+transforming...
+[32m✓[39m 151 modules transformed.
+rendering chunks...
+computing gzip size...
+[2m../web/workspace/[22m[32mindex.html                 [39m[1m[2m  0.45 kB[22m[1m[22m[2m │ gzip:   0.30 kB[22m
+[2m../web/workspace/[22m[2massets/[22m[35mindex-ME9Fya7r.css  [39m[1m[2m 36.74 kB[22m[1m[22m[2m │ gzip:   8.68 kB[22m
+[2m../web/workspace/[22m[2massets/[22m[36mindex-Dwf7QeVm.js   [39m[1m[2m478.77 kB[22m[1m[22m[2m │ gzip: 144.82 kB[22m
+[32m✓ built in 1.94s[39m

@@ -1,0 +1,129 @@
+
+> relay-leads-workspace@1.0.0 test:e2e
+> playwright test
+
+
+Running 8 tests using 1 worker
+
+  ✓  1 [chromium-desktop] › e2e/workspace.spec.ts:27:1 › real rendered workspace loads, navigates and exposes source evidence (2.9s)
+  ✘  2 [chromium-desktop] › e2e/workspace.spec.ts:61:1 › manual views, actual responsive resize, pins, model edits and reload share persisted state (11.4s)
+  ✓  3 [chromium-desktop] › e2e/workspace.spec.ts:114:1 › typed fields, confirmed human corrections and exact human source navigation (3.0s)
+  ✓  4 [chromium-desktop] › e2e/workspace.spec.ts:153:1 › search, empty states and practice remain scoped; busy interaction holds updates (2.2s)
+  ✓  5 [chromium-mobile] › e2e/workspace.spec.ts:27:1 › real rendered workspace loads, navigates and exposes source evidence (1.9s)
+  ✘  6 [chromium-mobile] › e2e/workspace.spec.ts:61:1 › manual views, actual responsive resize, pins, model edits and reload share persisted state (30.3s)
+  ✘  7 [chromium-mobile] › e2e/workspace.spec.ts:114:1 › typed fields, confirmed human corrections and exact human source navigation (8.5s)
+  ✓  8 [chromium-mobile] › e2e/workspace.spec.ts:153:1 › search, empty states and practice remain scoped; busy interaction holds updates (2.2s)
+
+
+  1) [chromium-desktop] › e2e/workspace.spec.ts:61:1 › manual views, actual responsive resize, pins, model edits and reload share persisted state 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('button', { name: 'Agent-organized leads', exact: true })
+    Expected: visible
+    Timeout: 8000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 8000ms
+      - waiting for getByRole('button', { name: 'Agent-organized leads', exact: true })
+
+
+      73 |   await page.getByRole('button', { name: 'Apply updates', exact: true }).click();
+      74 |   // Known historical failure: active tab name included a trailing count, e.g. "Agent-organized leads 31".
+    > 75 |   await expect(page.getByRole('button', { name: 'Agent-organized leads', exact: true })).toBeVisible();
+         |                                                                                          ^
+      76 |   const current = await state(request);
+      77 |   const view = current.spec.views.find(v => v.name === 'Agent-organized leads')!;
+      78 |   const tableId = view.widgets.find(id => current.spec.widgets[id].kind === 'LeadsTable')!;
+        at /home/runner/work/Relay-sdr/Relay-sdr/frontend/e2e/workspace.spec.ts:75:90
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/workspace-manual-views-act-7c645-eload-share-persisted-state-chromium-desktop/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/workspace-manual-views-act-7c645-eload-share-persisted-state-chromium-desktop/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/workspace-manual-views-act-7c645-eload-share-persisted-state-chromium-desktop/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/workspace-manual-views-act-7c645-eload-share-persisted-state-chromium-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium-mobile] › e2e/workspace.spec.ts:61:1 › manual views, actual responsive resize, pins, model edits and reload share persisted state 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: 'Organize', exact: true })
+
+
+      68 |   await expect(create).not.toBeVisible();
+      69 |   await page.getByLabel('Workspace instruction').fill('Focus the workspace on evidence');
+    > 70 |   await page.getByRole('button', { name: 'Organize', exact: true }).click();
+         |                                                                     ^
+      71 |   await expect(page.locator('.job-status')).toContainText('succeeded');
+      72 |   await page.getByLabel('Search leads').focus();
+      73 |   await page.getByRole('button', { name: 'Apply updates', exact: true }).click();
+        at /home/runner/work/Relay-sdr/Relay-sdr/frontend/e2e/workspace.spec.ts:70:69
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/workspace-manual-views-act-7c645-eload-share-persisted-state-chromium-mobile/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/workspace-manual-views-act-7c645-eload-share-persisted-state-chromium-mobile/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/workspace-manual-views-act-7c645-eload-share-persisted-state-chromium-mobile/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/workspace-manual-views-act-7c645-eload-share-persisted-state-chromium-mobile/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [chromium-mobile] › e2e/workspace.spec.ts:114:1 › typed fields, confirmed human corrections and exact human source navigation 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('.leads-table')
+    Expected: visible
+    Timeout: 8000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 8000ms
+      - waiting for locator('.leads-table')
+
+
+      13 |   await page.addInitScript(value => sessionStorage.setItem('relay-token', value), token);
+      14 |   await page.goto('/leads');
+    > 15 |   await expect(page.locator('.leads-table')).toBeVisible();
+         |                                              ^
+      16 | }
+      17 | async function reset(request: APIRequestContext) {
+      18 |   const boot = await state(request);
+        at login (/home/runner/work/Relay-sdr/Relay-sdr/frontend/e2e/workspace.spec.ts:15:46)
+        at /home/runner/work/Relay-sdr/Relay-sdr/frontend/e2e/workspace.spec.ts:115:25
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/workspace-typed-fields-con-af567-act-human-source-navigation-chromium-mobile/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/workspace-typed-fields-con-af567-act-human-source-navigation-chromium-mobile/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/workspace-typed-fields-con-af567-act-human-source-navigation-chromium-mobile/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/workspace-typed-fields-con-af567-act-human-source-navigation-chromium-mobile/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3 failed
+    [chromium-desktop] › e2e/workspace.spec.ts:61:1 › manual views, actual responsive resize, pins, model edits and reload share persisted state 
+    [chromium-mobile] › e2e/workspace.spec.ts:61:1 › manual views, actual responsive resize, pins, model edits and reload share persisted state 
+    [chromium-mobile] › e2e/workspace.spec.ts:114:1 › typed fields, confirmed human corrections and exact human source navigation 
+  5 passed (1.1m)
