@@ -1,0 +1,88 @@
+name: Shared workspace UI milestone
+on:
+  push:
+    branches: [feat/ai-leads-workspace-continue]
+    paths: ['.github/workflows/workspace-shared-ui-milestone.yml']
+permissions:
+  contents: write
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/feat/ai-leads-workspace-continue'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      ENABLE_OUTBOUND: 'false'
+      OPENAI_API_KEY: ''
+      WORKSPACE_API_KEY: ''
+      TWILIO_AUTH_TOKEN: ''
+      LANGSMITH_TRACING: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/ai-leads-workspace-continue
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply this incremental change only, without old restoration scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python - <<'PY'
+          import pathlib, subprocess
+          expected = {
+            'CONTINUATION.md': ('978231ac4d1e1d1c36fc91e49f23ec29cef40636', 'caf775ad30f9387975c415f1e557fee6c6a788c9'),
+            'frontend/src/App.tsx': ('aed955ed0e496f406638ef57b166ce5d2a63617c', '737a2e40fb1c4c96912d900f14cd4654af20b05e'),
+            'frontend/src/catalog.tsx': ('eb1fadc45905198edcc95d45d4841686fa72633f', 'dae151a5415167a70656e2f1140ed77920b5ad98'),
+            'frontend/src/editors.tsx': ('a28ff07d912741d3ab6e6c59f9653fc45cbdda5b', '77bccb74dab4b6c3769d897246bc544c47bf2504'),
+            'frontend/src/geometry.ts': (None, '5c8d7c971167bb5970ea497d27063c0413385d43'),
+          }
+          def check(index):
+              for name, pair in expected.items():
+                  want = pair[index]
+                  if want is None:
+                      assert not pathlib.Path(name).exists(), name
+                  else:
+                      got = subprocess.check_output(['git','hash-object',name],text=True).strip()
+                      assert got == want, (name, got, want)
+          check(0)
+          patch = 'continuation/05-shared-workspace.patch'
+          subprocess.run(['git','apply','--check','--index','--unidiff-zero',patch],check=True)
+          subprocess.run(['git','apply','--index','--unidiff-zero',patch],check=True)
+          check(1)
+          subprocess.run(['git','diff','--exit-code','HEAD','--','recovery/ai-leads-workspace-v2'],check=True)
+          PY
+          git rm continuation/05-shared-workspace.patch
+          npm ci --prefix frontend
+          npm run typecheck --prefix frontend
+          npm run lint --prefix frontend
+          npm run build --prefix frontend
+          git add web/workspace
+          git config user.name 'Relay workspace implementation'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'fix(workspace): recoverable reads, shared keyboard geometry, scoped evidence and board pagination'
+          git push origin HEAD:refs/heads/feat/ai-leads-workspace-continue
+      - name: Verify actual native application
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/shared-ui-verification
+          git rev-parse HEAD > /tmp/shared-ui-verification/SOURCE-COMMIT
+          python -m pip install -r requirements-dev.txt
+          python recovery/ai-leads-workspace-v2/verify_github_checkpoint.py | tee /tmp/shared-ui-verification/integrity.json
+          python -m pytest tests -q | tee /tmp/shared-ui-verification/backend.txt
+          cd frontend
+          npx playwright install --with-deps chromium
+          npm run test:e2e | tee /tmp/shared-ui-verification/browser.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shared-ui-native-verification
+          path: |
+            /tmp/shared-ui-verification/
+            frontend/test-results/
+          retention-days: 7
