@@ -1,0 +1,97 @@
+diff --git a/app/workspace/worker.py b/app/workspace/worker.py
+index c5d9520ed52714a5cd6fda84345c03f3eaa16054..65a9860ec3b92a9012209b33e6f597976b56767a 100644
+--- a/app/workspace/worker.py
++++ b/app/workspace/worker.py
+@@ -169 +169 @@
+-                dedupe = f"lead:{row['lead_id']}:{row['generation']}:{rubric['version']}:{PROMPT_VERSION}:{self.config.workspace_model}"
++                dedupe = f"lead:{row['lead_id']}:{row['generation']}:{rubric['version']}:{PROMPT_VERSION}:{SCHEMA_VERSION}:{self.config.workspace_model}"
+@@ -222 +222 @@
+-            self._finish(job, 'superseded', error='Newer evidence, corrections, or rubric superseded this run.')
++            self._finish(job, 'superseded', error='Newer evidence, corrections, rubric, or model/schema configuration superseded this run.')
+@@ -260,0 +261 @@
++            self.assert_runtime(result)
+@@ -265,0 +267,8 @@
++    def assert_runtime(self, job):
++        # Never resume a draft/checkpoint under another model or schema while
++        # labeling its output as the old configuration. Analysis will be queued
++        # afresh by scan(); operator commands require explicit resubmission.
++        if (job['model'] != self.config.workspace_model or
++                job['prompt_version'] != PROMPT_VERSION or job['schema_version'] != SCHEMA_VERSION):
++            raise StaleRun()
++
+@@ -266,0 +276 @@
++        self.assert_runtime(job)
+@@ -319,0 +330 @@
++        self.assert_runtime(job)
+@@ -377 +388,2 @@
+-                                       intelligence.digest(book_context), PROMPT_VERSION, self.config.workspace_model])
++                                       intelligence.digest(book_context), PROMPT_VERSION, SCHEMA_VERSION,
++                                       self.config.workspace_model, intelligence.digest(chunk)])
+diff --git a/frontend/src/App.tsx b/frontend/src/App.tsx
+index 737a2e40fb1c4c96912d900f14cd4654af20b05e..3010b5d81f60d338b82ef617c0add61685849089 100644
+--- a/frontend/src/App.tsx
++++ b/frontend/src/App.tsx
+@@ -11 +11 @@
+-import { changeGeometry } from './geometry';
++import { changeGeometry, settleGeometry } from './geometry';
+@@ -30,2 +30 @@
+-function MeasuredGrid(props: Omit<ResponsiveGridLayoutProps<Breakpoint>, 'width'>) {
+-  // This component mounts with its element present; the login/loading shell does not.
++function MeasuredGrid({ onBreakpointChange, ...props }: Omit<ResponsiveGridLayoutProps<Breakpoint>, 'width'>) {
+@@ -33 +32,6 @@
+-  return <div ref={containerRef}>{mounted && <Responsive<Breakpoint> {...props} width={width}/>}</div>;
++  // RGL reports breakpoint transitions, not necessarily the initial breakpoint.
++  // Manual commands must use the measured container, including first mobile load.
++  useEffect(() => {
++    if (mounted) { const bp = width >= 1000 ? 'lg' : width >= 700 ? 'md' : 'sm'; onBreakpointChange?.(bp, COLS[bp]); }
++  }, [mounted, width, onBreakpointChange]);
++  return <div ref={containerRef}>{mounted && <Responsive<Breakpoint> {...props} onBreakpointChange={onBreakpointChange} width={width}/>}</div>;
+@@ -46 +50 @@
+-  const [breakpoint, setBreakpoint] = useState<Breakpoint>('lg'); const [editCanvas, setEditCanvas] = useState(false);
++  const [breakpoint, setBreakpoint] = useState<Breakpoint>('lg'); const [editCanvas, setEditCanvas] = useState(false); const [gridReset, setGridReset] = useState(0);
+@@ -140 +144,12 @@
+-  function captureLayout(layout: Layout) { if (!view) return; setLayoutDraft({ ...(layoutDraft || view.layouts), [breakpoint]: stripLayout(layout) }); setDragging(false); }
++  function captureLayout(layout: Layout, movedId?: string) {
++    if (!view || !movedId) { setDragging(false); return; }
++    try {
++      const base = layoutDraft || view.layouts; const raw = stripLayout(layout);
++      const pins = new Set(Object.values(boot!.spec.widgets).filter(w => w.pinned).map(w => w.id));
++      for (const item of base[breakpoint].filter(g => pins.has(g.i))) {
++        if (JSON.stringify(raw.find(g => g.i === item.i)) !== JSON.stringify(item)) throw new Error('Pinned geometry cannot be displaced.');
++      }
++      setLayoutDraft({ ...base, [breakpoint]: settleGeometry(raw, movedId, pins) }); setError('');
++    } catch (e) { setError((e as Error).message); setGridReset(n => n + 1); }
++    finally { setDragging(false); }
++  }
+@@ -172 +187 @@
+-    <aside className="sidebar"><a className="brand" href="/#overview"><span className="brand-symbol">r</span><span>relay <small>SDR</small></span></a><span className="nav-caption">WORKSPACE</span><nav aria-label="Main navigation">{[['grid','Overview','/#overview'],['people','Leads','/leads'],['phone','Voice lab','/#lab'],['book','Playbook','/#playbook'],['clock','Calls','/#calls'],['link','Connections','/#connections']].map(([icon,name,href]) => <a key={name} href={href} className={name === 'Leads' ? 'nav-item active' : 'nav-item'} title={name}><Icon name={icon}/><span>{name}</span>{name === 'Leads' && <span className="nav-dot"/>}</a>)}</nav><div className="sidebar-bottom"><div className="workspace-avatar">R</div><div><strong>Private workspace</strong><small>Local · single operator</small></div><button className="icon-button" aria-label="Lock workspace" onClick={lockWorkspace}><Icon name="lock" size={16}/></button></div></aside>
++    <aside className="sidebar"><a className="brand" href="/#overview"><span className="brand-symbol">r</span><span>relay <small>SDR</small></span></a><span className="nav-caption">WORKSPACE</span><nav aria-label="Main navigation">{[['grid','Overview','/#overview'],['people','Leads','/leads'],['phone','Voice lab','/#lab'],['book','Playbook','/#playbook'],['clock','Calls','/#calls'],['link','Connections','/#connections']].map(([icon,name,href]) => <a key={name} href={href} className={name === 'Leads' ? 'nav-item active' : 'nav-item'} title={name}><Icon name={icon}/><span>{name}</span>{name === 'Leads' && <span className="nav-dot"/>}</a>)}</nav><details className="mobile-navigation"><summary aria-label="Open navigation">Menu</summary><nav aria-label="Mobile navigation">{[["Overview","/#overview"],["Leads","/leads"],["Voice lab","/#lab"],["Playbook","/#playbook"],["Calls","/#calls"],["Connections","/#connections"]].map(([name,href]) => <a key={name} href={href}>{name}</a>)}<button onClick={lockWorkspace}>Lock workspace</button></nav></details><div className="sidebar-bottom"><div className="workspace-avatar">R</div><div><strong>Private workspace</strong><small>Local · single operator</small></div><button className="icon-button" aria-label="Lock workspace" onClick={lockWorkspace}><Icon name="lock" size={16}/></button></div></aside>
+@@ -196 +211 @@
+-        {<MeasuredGrid layouts={layouts} breakpoints={{ lg: 1000, md: 700, sm: 0 }} cols={COLS} rowHeight={28} margin={[16,16]} containerPadding={[0,0]} compactor={noCompactor}
++        {<MeasuredGrid key={`${view.id}:${gridReset}`} layouts={layouts} breakpoints={{ lg: 1000, md: 700, sm: 0 }} cols={COLS} rowHeight={28} margin={[16,16]} containerPadding={[0,0]} compactor={noCompactor}
+@@ -198 +213 @@
+-          onBreakpointChange={setBreakpoint} onDragStart={() => setDragging(true)} onResizeStart={() => setDragging(true)} onDragStop={captureLayout} onResizeStop={captureLayout}>
++          onBreakpointChange={setBreakpoint} onDragStart={() => setDragging(true)} onResizeStart={() => setDragging(true)} onDragStop={(layout, _old, item) => captureLayout(layout, item?.i)} onResizeStop={(layout, _old, item) => captureLayout(layout, item?.i)}>
+diff --git a/frontend/src/geometry.ts b/frontend/src/geometry.ts
+index 5c8d7c971167bb5970ea497d27063c0413385d43..60cc7aaaf3233a597041c3e01b769110aa2f11c8 100644
+--- a/frontend/src/geometry.ts
++++ b/frontend/src/geometry.ts
+@@ -27,0 +28,10 @@
++  return settleGeometry(next, id, pinned);
++}
++
++/** react-grid-layout's noCompactor preserves gaps but does not displace peers
++ * after a southeast resize. Normalize the stopped pointer gesture explicitly,
++ * using the same collision and pin rules as the keyboard controls.
++ */
++export function settleGeometry(layout: Geometry[], id: string, pinned: Set<string>): Geometry[] {
++  const next = structuredClone(layout); const item = next.find(g => g.i === id);
++  if (!item || pinned.has(id)) throw new Error('This widget is not movable.');
+diff --git a/frontend/src/style.css b/frontend/src/style.css
+index 7d4ca4f8aabc4770815a30984e11c966ab2a6acb..8451f27581325b1c08a289e905733d544385ae15 100644
+--- a/frontend/src/style.css
++++ b/frontend/src/style.css
+@@ -8,0 +9,3 @@
++
++.mobile-navigation{display:none}
++@media(max-width:700px){.mobile-navigation{display:block;position:relative;margin-left:6px}.mobile-navigation summary{color:#fff;font-size:11px;padding:9px;cursor:pointer;list-style:none;border:1px solid #526c5f;border-radius:6px}.mobile-navigation nav{position:absolute!important;right:0;top:40px;display:flex!important;flex-direction:column!important;background:var(--sidebar);border:1px solid #526c5f;border-radius:7px;min-width:180px;padding:8px;box-shadow:0 10px 25px #16382930;z-index:50}.mobile-navigation:not([open]) nav{display:none!important}.mobile-navigation a,.mobile-navigation button{font-size:12px;color:#eef6f0;padding:10px;text-align:left;background:transparent;border:0;justify-content:flex-start}.sidebar>nav{margin-left:auto}}
