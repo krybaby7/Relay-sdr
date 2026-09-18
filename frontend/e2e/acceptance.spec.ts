@@ -24,7 +24,12 @@ test.describe('complete shared-workspace acceptance', () => {
     }
     const tablePanel = page.locator(`[data-widget-id="${table}"]`);
     const changesPanel = page.locator(`[data-widget-id="${changes}"]`);
-    expect((await changesPanel.boundingBox())!.y).toBeLessThan((await tablePanel.boundingBox())!.y);
+    // Assert rendered geometry after the asynchronous refresh/transition, not
+    // its intermediate animation frame. The saved-layout assertions stay above.
+    await expect.poll(async () => {
+      const changed = await changesPanel.boundingBox(), directory = await tablePanel.boundingBox();
+      return changed && directory ? directory.y - changed.y : -1;
+    }).toBeGreaterThan(0);
     await page.getByRole('button', { name: 'Customize canvas', exact: true }).click();
     // Exercise a real keyboard activation, not a direct state/API layout write.
     await page.getByRole('button', { name: 'Up Lead directory', exact: true }).focus();
@@ -83,7 +88,7 @@ test.describe('complete shared-workspace acceptance', () => {
     await page.getByRole('button', { name, exact: true }).click();
     await expect(page.getByLabel('Unpin Lead directory', { exact: true })).toBeVisible();
     expect((await state(request)).spec.views.find(v => v.id === view.id)).toEqual(finalView);
-    await page.screenshot({path: `test-results/${info.project.name}-shared-layout.png`, fullPage: true});
+    await page.screenshot({path: `test-results/${info.project.name}-shared-layout.png`, fullPage: true, animations: 'disabled'});
   });
 
   test('suggestions require approval; locked views reject agent and manual changes', async ({ page, request }) => {
@@ -167,7 +172,7 @@ test.describe('complete shared-workspace acceptance', () => {
     const records = await request.post('/api/workspace/query', { headers, data: {view_id:'all'} });
     expect((await records.json()).total).toBe(31);
     await page.getByRole('button', {name:'All leads', exact:true}).click();
-    await page.screenshot({path: `test-results/${info.project.name}-reset.png`, fullPage:true});
+    await page.screenshot({path: `test-results/${info.project.name}-reset.png`, fullPage:true,animations:'disabled'});
   });
 
   test('initial read failure is retryable; model outage leaves manual editing available', async ({ page, request }) => {
@@ -212,7 +217,10 @@ test.describe('complete shared-workspace acceptance', () => {
     await expect(page.getByRole('button', {name:'Newer operator name',exact:true})).toBeVisible();
     await page.getByRole('button', {name:'Highest potential',exact:true}).click();
     await page.locator('.lead-name').filter({hasText:'Fictional Acme'}).click();
+    const leadDialog = page.getByRole('dialog', {name:'Fictional Acme',exact:true});
+    await expect(leadDialog).toBeVisible();
     await page.keyboard.press('Escape');
+    await expect(leadDialog).not.toBeVisible();
     await expect(page.locator('.evidence-widget')).toContainText('manual follow-up');
     await page.getByRole('button', {name:'Practice / demo',exact:true}).click();
     await page.getByRole('button', {name:'Highest potential',exact:true}).click();

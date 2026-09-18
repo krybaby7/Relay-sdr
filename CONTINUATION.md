@@ -166,3 +166,15 @@ Source commit: `4b317dadcd2d7138223ff1fc12f8e0d4bc0867aa`. All executed checks p
 Results, exact commands/exit codes/source hashes and fictional screenshots are
 committed under `verification/acceptance-2026-09-18/`. Read stage logs for counts
 and durations. These are mocked-provider/loopback checks, not live verification.
+
+## Clean-run readiness corrections — 2026-09-18
+
+The first clean GitHub run on 4b317dad had 169 backend and 8 unit tests passing,
+with 19/22 browser cases passing. Two failures sampled geometry during a CSS
+transition; the third pressed Escape before the asynchronous lead dialog opened.
+The same rendered ordering condition now waits for UI readiness, and the dialog
+must visibly open and close before the practice transition. No test was skipped,
+no layout assertion removed, and no application validation relaxed. Stable
+rendered-overview tests also check non-overlap and viewport bounds directly.
+Historical failed results remain at df36ce182c20873392a22e9a34560b8732defa0c.
+This native test fix is committed before rerunning the entire suite.
