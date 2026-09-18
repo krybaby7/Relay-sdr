@@ -1,0 +1,17 @@
+
+> relay-leads-workspace@1.0.0 test:unit
+> playwright test --config=playwright.unit.config.ts
+
+
+Running 8 tests using 1 worker
+
+  ✓  1 unit/geometry.spec.ts:9:1 › keyboard up moves before its neighbour instead of snapping back (12ms)
+  ✓  2 unit/geometry.spec.ts:14:1 › keyboard down moves past its neighbour without overlapping (5ms)
+  ✓  3 unit/geometry.spec.ts:17:1 › resizing cascades through unpinned peers (2ms)
+  ✓  4 unit/geometry.spec.ts:20:1 › pins cannot be moved directly or by a conflicting neighbour (6ms)
+  ✓  5 unit/geometry.spec.ts:26:1 › cascade skips over a pinned obstacle without changing it (4ms)
+  ✓  6 unit/geometry.spec.ts:31:1 › width and height constraints match persisted geometry bounds (3ms)
+  ✓  7 unit/geometry.spec.ts:37:1 › invalid IDs and overflowing canvas changes fail without mutation (2ms)
+  ✓  8 unit/geometry.spec.ts:42:1 › pointer resize displacement uses the same collision rules without compacting gaps (2ms)
+
+  8 passed (679ms)

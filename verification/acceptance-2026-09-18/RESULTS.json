@@ -1,0 +1,143 @@
+{
+  "source_commit": "4b317dadcd2d7138223ff1fc12f8e0d4bc0867aa",
+  "initial_worktree_status": "",
+  "source_sha256": {
+    "app/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "app/config.py": "82ab3c8cfca566e8021030c7c43cfa3b9e430a996bd3b4f6fc66423a9d37aa8f",
+    "app/db.py": "0f43b19ec3e219ebcca3f199eda0f36f180b53a607baffd278a26f4a0294bb6c",
+    "app/live.py": "d6b2d6272a3ab9df394d3abeb03023219c280d3907efea320d56d6fb4c1783d1",
+    "app/main.py": "5f64e4ce830fcedb3aedc6d38da09fe556d4964ee2edb2a04e9ce115891db12f",
+    "app/models.py": "70784a97816e1f49e8e7feb5a54d6c3535d1e8bff04c0d53b5c47eb6d65aa80f",
+    "app/policy.py": "60ec283ffdca4be8438709a7ff0b16c6c2e95ba864258ea4ab9c3b6d249b4cf5",
+    "app/telephony.py": "cc5794467bccf20bb6b38c92e6c22c5ada3b6a5535ea9e0b476ab40da60aa8f1",
+    "app/workspace/__init__.py": "b6b6c727e8752e8d2f6d41149b83710963b1fb04116aecad646217b78b88d4e1",
+    "app/workspace/evidence.py": "33bbce20c4369457454431f32368000fac900cd594c02330ae78ef9c23ccb03d",
+    "app/workspace/intelligence.py": "87690931e966e1b3d674a21b52d966718d4819dfb2d27b7ec83a72594c37dfc9",
+    "app/workspace/migrations.py": "c3036ef093ca19ea88c68210f0cc8a8c9a87ed78fb2b3fdd76a74b8ae4a65c78",
+    "app/workspace/model.py": "5572dc3d9b097b1ab1f93d47735566030d3a49520036e5bd9e27c540c6e4891d",
+    "app/workspace/presentation.py": "8e35085b12b30db420a2d0c93b76ec6660ef6727f8ab9271f469d970986fdd2b",
+    "app/workspace/queries.py": "e6d7bce4078efe85a9c99a19ed09a975e5bec04f722e282234dfdc92e81a5a86",
+    "app/workspace/redaction.py": "23396b6eb7a0adee8929d71814a838d197acc0b9d60067246e60bc0211972c1f",
+    "app/workspace/routes.py": "472b10dfffb7cbd0d34116b6cabe5807439355d9fe11ded7ba878ebb9a0ebf70",
+    "app/workspace/schema.py": "a47c7a60b0e6afc5fe13a7d5a4ee939f116ea96b17ee2663f8d7674064ed1cc1",
+    "app/workspace/worker.py": "9b0137fc7e48a0e41865000c2723735aacf4ae45bade398bc7326c0083475a56",
+    "frontend/e2e/acceptance.spec.ts": "8b5b96b5f80bbf6e01d633c43a17302d5e0ada936c1c306c771418c21578b54c",
+    "frontend/e2e/fixtures.ts": "0902dde958f47a143bd72983058628383b9aebed60283b9e62922181dcb5602b",
+    "frontend/e2e/helpers.ts": "c69b95f819eb39f5d890f0c8aad326adca481031b8d2945bc63144bb5afd9991",
+    "frontend/e2e/rendering.spec.ts": "cab138bb259ea8050bc052286e634ad511c547d2e701085d9f6f4b2c790d2da6",
+    "frontend/e2e/workspace.spec.ts": "f72b87b698b8bcea96919919d4fb62247c0580e6a66fac3f8adc62538d38bb2a",
+    "frontend/package-lock.json": "c900a4fce329cda29bd310f2ef5a3f742e8affc87bfb51a9021824ac70245af2",
+    "frontend/package.json": "8d7583445613ad4e8dcb2d522b10ea9e0556686073a88f699884d71383b041c9",
+    "frontend/playwright.config.ts": "4627cf534a21547932c22183da93d0f1af3e4b770b42c72e943dc527686967bd",
+    "frontend/playwright.unit.config.ts": "1b283c794ddd28cb6d525fa2a98eeb457cab00b94d58532f3f60255d32488da3",
+    "frontend/src/App.tsx": "60917b89c977d211576f0dbe831afb48840ed4b4459f238becd04d9e7cd88cd5",
+    "frontend/src/api.ts": "f43fdf66e87979a8bb75cac2f1a4ba2c19fe4fbcb94b3747e70856b38c0d3e26",
+    "frontend/src/catalog.tsx": "e63dd54b4c4749f7064cd7e8dadbcae3e46953084fef242c5fed945667b618fb",
+    "frontend/src/details.tsx": "5611c061728dc13e6f16ddbe99b98534b61b568607e29624ea51a0396265ebc0",
+    "frontend/src/editors.tsx": "a11827c5c45f6c8305fbe228af5c6bcfbc7280a314dc0b8ec53420f82976ff6e",
+    "frontend/src/geometry.ts": "7f94203b51d8b218e0f4395a76561863e6e5bd9f860c944e9ec3efa7bfabe1bd",
+    "frontend/src/main.tsx": "5103806b3016ec398ff848c1fc5216ef983789727cabe8d46a1247502092e6e9",
+    "frontend/src/style.css": "bfff091f6dbfb3b9a4c5b9d8b2b7775a7f897b17a35114d7773d21a27bc918d7",
+    "frontend/src/types.ts": "30c82a14015af9a1655964152615e043c207fb48a9b9a4111953349c1274555b",
+    "frontend/src/ui.tsx": "e790487668b984ee0397cabfabb63b3909a9259113c84b0305ace21a4006df17",
+    "frontend/tsconfig.json": "956e894da3b44b5522c0f96119aed10a08147de7f2bd3913ae4d0fae35bddac4",
+    "frontend/unit/geometry.spec.ts": "48aececf7f25642f4e9ecd4be34cbc19c89bba169a5e2b0f1ee6f16042096de8",
+    "frontend/vite.config.ts": "bbfe66b68626af7d5172c52e5d6c1d130eea81ca2472fd5a073b289cd3eb4417",
+    "requirements-constraints.txt": "87aadbbb6d732e2eda32a8e666fe377943a43cf28d078c4ae6903127ab2a0bf0",
+    "requirements-dev.txt": "2b0164a2bd17db12adca86eaf30d6012415b44a7dccded3962df7df5ad1a28ae",
+    "requirements.txt": "af2ee466286f09341dd793afe116027eaefb63002e16e08fff199c28917d886a",
+    "scripts/verify_workspace.py": "0b86bcb9c4f9952789ce058a81774a7f89dcde8f5f2e62154b363a29ce99ac09",
+    "tests/conftest.py": "fb6499c29c9edac84643270cdf46b28c2242bbf3ffb735b4752e030abac5e58a",
+    "tests/test_api.py": "d76861636feb8720292a2024d23425d47fb55982820cff23332e400627d9bb3d",
+    "tests/test_live_bridge.py": "35695b82118aa3806d2c70c9cd2d2eb64599fe91bc54141a18c4c9f11ed9a504",
+    "tests/test_policy.py": "ab3ce051193c97fbcf68390b8d25f7ff60ab67666f0ff08528c99faa0c17094d",
+    "tests/test_tools.py": "f2f70008868a04a1c256fd04f25021afb15da371e2bb00ae6b90c964f940e993",
+    "tests/test_workspace.py": "30bc83a7a2f7077f6a04c90d2eb337f3beff3691f54c50702888ab8c14752d29",
+    "tests/test_workspace_http.py": "8ce625b3b44abf88da22fe576f4b839d5b13933f99e6e87998605fa8d41eae11",
+    "tests/ui_smoke.py": "b3a371a7864f152ce116d7129b4b6f7f6742b4e1f20d60b7ef0e6cb7df34893d",
+    "tests/workspace_browser_server.py": "131adca8305690b2de1c42d4f295aff2decee9f02f492729fb3ca2630f06fa1c",
+    "tests/workspace_fixtures.py": "c9a872678aadc982bddfa7be3786354be6f5b33c0882c502d6a5288756277940"
+  },
+  "scope": "Mocked providers and fictional loopback fixtures only. No live provider verification.",
+  "checks": [
+    {
+      "name": "integrity",
+      "command": [
+        "/opt/hostedtoolcache/Python/3.13.15/x64/bin/python",
+        "recovery/ai-leads-workspace-v2/verify_github_checkpoint.py"
+      ],
+      "cwd": ".",
+      "exit_code": 0,
+      "seconds": 0.11
+    },
+    {
+      "name": "backend",
+      "command": [
+        "/opt/hostedtoolcache/Python/3.13.15/x64/bin/python",
+        "-m",
+        "pytest",
+        "tests",
+        "-q"
+      ],
+      "cwd": ".",
+      "exit_code": 0,
+      "seconds": 19.16
+    },
+    {
+      "name": "typecheck",
+      "command": [
+        "/opt/hostedtoolcache/node/22.23.2/x64/bin/npm",
+        "run",
+        "typecheck"
+      ],
+      "cwd": "frontend",
+      "exit_code": 0,
+      "seconds": 3.99
+    },
+    {
+      "name": "lint",
+      "command": [
+        "/opt/hostedtoolcache/node/22.23.2/x64/bin/npm",
+        "run",
+        "lint"
+      ],
+      "cwd": "frontend",
+      "exit_code": 0,
+      "seconds": 1.52
+    },
+    {
+      "name": "unit",
+      "command": [
+        "/opt/hostedtoolcache/node/22.23.2/x64/bin/npm",
+        "run",
+        "test:unit"
+      ],
+      "cwd": "frontend",
+      "exit_code": 0,
+      "seconds": 1.37
+    },
+    {
+      "name": "build",
+      "command": [
+        "/opt/hostedtoolcache/node/22.23.2/x64/bin/npm",
+        "run",
+        "build"
+      ],
+      "cwd": "frontend",
+      "exit_code": 0,
+      "seconds": 2.23
+    },
+    {
+      "name": "browser",
+      "command": [
+        "/opt/hostedtoolcache/node/22.23.2/x64/bin/npm",
+        "run",
+        "test:e2e"
+      ],
+      "cwd": "frontend",
+      "exit_code": 1,
+      "seconds": 198.29
+    }
+  ],
+  "all_executed_checks_passed": false
+}

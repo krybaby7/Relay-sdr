@@ -159,3 +159,10 @@ or force push. Remaining verification boundaries: live reasoning quality,
 real voice/PSTN, physical mobile/Safari/Firefox, load/security/compliance
 certification, retention operations and multi-process use. These are not
 claimed verified. Final delivery includes an unmerged pull request.
+
+## Clean native verification — Actions 35325613258
+
+Source commit: `4b317dadcd2d7138223ff1fc12f8e0d4bc0867aa`. All executed checks passed: **False**.
+Results, exact commands/exit codes/source hashes and fictional screenshots are
+committed under `verification/acceptance-2026-09-18/`. Read stage logs for counts
+and durations. These are mocked-provider/loopback checks, not live verification.
