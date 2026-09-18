@@ -88,3 +88,31 @@ Remaining at this milestone: broaden UI acceptance (actual model-planned geometr
 board/columns/history/undo/locks/error recovery); audit all original requirements;
 finish architecture/setup/license documentation, full regression rerun, screenshots
 and unmerged pull request. This milestone is not a completed release claim.
+
+## Shared-workspace acceptance continuation — 2026-09-18
+
+Inspected newer remote head `1bf36a7aab36cc72b32ff6ab19ee2217fc2984a1` rather
+than resetting the supplied `37d5c3a` anchor. Source/toolchain verification commit
+`ab71d202e3bc245a7b4d85c5717f45eabf9e2f23` ran in Actions 35320940023.
+Local baseline: recovery integrity passed; `python -m pytest tests -q`: 164
+passed, one upstream AnyIO warning (15.36s); frontend typecheck/lint/build passed;
+eight desktop/mobile Chromium tests passed, zero retries/skips (1.4m).
+
+Native UI changes at this milestone: recoverable initial-load errors; keyboard
+panel reordering with collision resolution and immutable pins; board pagination;
+preserved local queries when pinning/configuring; immediate invalidation of
+selected evidence across saved-view/practice switches; independent widget-read
+retry and refresh after task edits; paginated workspace history; detail emphasis
+retained when creating a view. Typecheck and lint passed after these changes.
+Broader browser tests are being added; these new interactions are not yet claimed
+verified. All data/providers are fictional/mocked; no live provider verification.
+
+Publication uses an ordinary guarded incremental source patch because git network
+access is unavailable in the editing container. The publisher verifies base and
+result blobs and removes its one-time input after applying it to native files.
+It never executes the older restoration patches or workflows. Recovery, main,
+calling, provider destinations and recording settings remain unchanged.
+
+Next: complete AI geometry/manual pin/lock/reload flows, board/column/history and
+error-recovery coverage; security/resilience audit, full rerun, setup/architecture/
+license documentation, actual screenshots and an unmerged pull request.

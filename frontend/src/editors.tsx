@@ -25,7 +25,7 @@ export function ViewEditor({ view, bootstrap, duplicate = false, initialQuery, c
     setSaving(true); setError('');
     try { const id = duplicate ? identifier('view') : view.id;
       const op: Operation = duplicate ? { op: 'create_view', view_id: id, name, query, duplicate_from: view.id } : { op: 'edit_view', view_id: id, name, query, emphasis };
-      await save([op], duplicate ? `Created view “${name}”` : `Updated view “${name}”`, duplicate ? id : undefined); close();
+      await save([op, ...(duplicate ? [{ op: 'edit_view' as const, view_id: id, emphasis }] : [])], duplicate ? `Created view “${name}”` : `Updated view “${name}”`, duplicate ? id : undefined); close();
     } catch (e) { setError((e as Error).message); } finally { setSaving(false); }
   }
   return <Modal title={duplicate ? 'Create a saved view' : 'Customize this view'} close={close} wide><form onSubmit={e => { e.preventDefault(); void submit(); }}>

@@ -8,6 +8,7 @@ import { Badge, Empty, Icon, Modal, WidgetBoundary } from './ui';
 import { registry, WorkspaceData } from './catalog';
 import { AddWidget, FieldEditor, ImportEditor, LeadEditor, QueryControls, RubricEditor, ViewEditor, WidgetEditor, widgetLabels } from './editors';
 import { CallViewer, LeadDetail, NoteViewer } from './details';
+import { changeGeometry } from './geometry';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import './style.css';
@@ -40,10 +41,10 @@ export default function App() {
   const [detail, setDetail] = useState<Detail | null>(null); const [detailOpen, setDetailOpen] = useState(false); const [call, setCall] = useState<{ id: string; reference?: Reference } | null>(null);
   const [noteSource, setNoteSource] = useState<{ id: string; leadId: string } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set()); const [dialog, setDialog] = useState<Dialog>(null); const [widgetId, setWidgetId] = useState('');
-  const [command, setCommand] = useState(''); const [activeJob, setActiveJob] = useState<Job | null>(null); const [jobs, setJobs] = useState<Job[]>([]); const [revisions, setRevisions] = useState<Revision[]>([]);
+  const [command, setCommand] = useState(''); const [activeJob, setActiveJob] = useState<Job | null>(null); const [jobs, setJobs] = useState<Job[]>([]); const [revisions, setRevisions] = useState<Revision[]>([]); const [historyMore, setHistoryMore] = useState(false);
   const [pending, setPending] = useState(false); const [refreshCounter, setRefreshCounter] = useState(0); const [dragging, setDragging] = useState(false); const [layoutDraft, setLayoutDraft] = useState<Layouts | null>(null);
   const [breakpoint, setBreakpoint] = useState<Breakpoint>('lg'); const [editCanvas, setEditCanvas] = useState(false);
-  const bootstrapLoading = useRef(false);
+  const bootstrapLoading = useRef(false); const sessionEpoch = useRef(0);
   const detailRequest = useRef(0); const busy = useRef(false); const lastInteraction = useRef(0); const bootRef = useRef(boot); const queryRef = useRef(query); const viewRef = useRef(viewId); const detailRef = useRef(detail);
   bootRef.current = boot; queryRef.current = query; viewRef.current = viewId; detailRef.current = detail;
   busy.current = detailOpen || !!call || !!noteSource || !!dialog || !!layoutDraft || dragging || editCanvas || selected.size > 0;
@@ -51,9 +52,10 @@ export default function App() {
 
   const loadBootstrap = useCallback(async (initial = false) => {
     if (bootstrapLoading.current) return;
-    bootstrapLoading.current = true;
+    bootstrapLoading.current = true; const epoch = sessionEpoch.current; setError('');
     try {
       const fresh = await readApi<Bootstrap>('/api/workspace');
+      if (epoch !== sessionEpoch.current) return;
       const id = !initial && fresh.spec.views.some(v => v.id === viewRef.current) ? viewRef.current : fresh.spec.default_view;
       const oldView = bootRef.current?.spec.views.find(v => v.id === id);
       const localQuery = queryRef.current;
@@ -61,9 +63,10 @@ export default function App() {
       setBoot(fresh); setViewId(id); setQuery(preserveQuery ? localQuery : fresh.spec.views.find(v => v.id === id)!.query); setPending(false); setRefreshCounter(n => n + 1);
       return fresh;
     } catch (e) {
+      if (epoch !== sessionEpoch.current) return;
       if (e instanceof ApiError && [401,403].includes(e.status)) { sessionStorage.removeItem('relay-token'); setAuthenticated(false); setBoot(null); setData(null); setDetail(null); }
       setError((e as Error).message); throw e;
-    } finally { bootstrapLoading.current = false; }
+    } finally { if (epoch === sessionEpoch.current) bootstrapLoading.current = false; }
   }, []);
   useEffect(() => { if (authenticated) void loadBootstrap(true).catch(() => undefined); }, [authenticated, loadBootstrap]);
   useEffect(() => {
@@ -106,16 +109,20 @@ export default function App() {
   async function save(operations: Operation[], reason: string, newViewId?: string) {
     if (!bootRef.current) return;
     const ops: Operation[] = layoutDraft && !operations.some(op => op.op === 'set_layout') ? [{ op: 'set_layout', view_id: viewId, layouts: layoutDraft }, ...operations] : operations;
+    const oldView = bootRef.current.spec.views.find(v => v.id === viewId);
+    const preserveQuery = oldView && queryRef.current && JSON.stringify(queryRef.current) !== JSON.stringify(oldView.query) && !ops.some(op => op.op === 'edit_view' && op.view_id === viewId && 'query' in op);
     const result = await api<{ version: number; spec: Bootstrap['spec'] }>('/api/workspace/changes', 'POST', { base_version: bootRef.current.version, reason, operations: ops });
     setLayoutDraft(null); setBoot({ ...bootRef.current, ...result }); setPending(false); setNotice(reason);
     if (newViewId) { setViewId(newViewId); setQuery(result.spec.views.find(v => v.id === newViewId)!.query); setPage(1); }
-    else { const freshView = result.spec.views.find(v => v.id === viewId); if (freshView) setQuery(freshView.query); }
+    else { const freshView = result.spec.views.find(v => v.id === viewId); if (freshView && !preserveQuery) setQuery(freshView.query); }
     setRefreshCounter(n => n + 1);
   }
   function action(promise: Promise<unknown>) { void promise.catch(e => setError((e as Error).message)); }
   function changeView(id: string) {
     if (layoutDraft) { setError('Save or discard the current layout changes before switching views.'); return; }
     const chosen = boot!.spec.views.find(v => v.id === id)!; setViewId(id); setQuery(chosen.query); setPage(1); setData(null); setSelected(new Set()); setNotice('');
+    // Selected evidence belongs to the old view, especially across real/practice.
+    detailRequest.current++; setDetail(null); setDetailOpen(false); setCall(null); setNoteSource(null);
   }
   async function openLead(id: string) { const request = ++detailRequest.current; setError(''); try { const result = await api<Detail>(`/api/workspace/leads/${id}`); if (request !== detailRequest.current) return; setDetail(result); setDetailOpen(true); } catch (e) { setError((e as Error).message); } }
   async function refreshDetail() { const id = detailRef.current?.lead.id; if (id) { const result = await api<Detail>(`/api/workspace/leads/${id}`); if (id === detailRef.current?.lead.id) setDetail(result); } setRefreshCounter(n => n + 1); }
@@ -132,35 +139,37 @@ export default function App() {
   }
   function captureLayout(layout: Layout) { if (!view) return; setLayoutDraft({ ...(layoutDraft || view.layouts), [breakpoint]: stripLayout(layout) }); setDragging(false); }
   function keyboardGeometry(id: string, change: 'up' | 'down' | 'wider' | 'narrower' | 'taller' | 'shorter') {
-    if (!view) return; const next = structuredClone(layoutDraft || view.layouts); const item = next[breakpoint].find(g => g.i === id)!;
-    if (change === 'up') item.y = Math.max(0, item.y - 2); if (change === 'down') item.y = Math.min(490, item.y + 2);
-    if (change === 'wider') item.w = Math.min(COLS[breakpoint] - item.x, item.w + 1); if (change === 'narrower') item.w = Math.max(4, item.w - 1);
-    if (change === 'taller') item.h = Math.min(30, item.h + 1); if (change === 'shorter') item.h = Math.max(4, item.h - 1);
-    // Push unlocked lower panels down; never displace a pinned one.
-    const ordered = [...next[breakpoint]].sort((a, b) => a.y - b.y);
-    for (let n = 0; n < ordered.length; n++) for (let prior = 0; prior < n; prior++) { const a = ordered[prior], b = ordered[n];
-      if (!boot!.spec.widgets[b.i].pinned && a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y) b.y = a.y + a.h;
-    }
-    setLayoutDraft(next);
+    if (!view || view.locked) return;
+    try {
+      const next = structuredClone(layoutDraft || view.layouts);
+      next[breakpoint] = changeGeometry(next[breakpoint], id, change, new Set(Object.values(boot!.spec.widgets).filter(w => w.pinned).map(w => w.id)), COLS[breakpoint]);
+      setLayoutDraft(next); setError('');
+    } catch (e) { setError((e as Error).message); }
   }
+
   async function addWidget(kind: Kind) {
     const id = identifier('widget'); const widget: Widget = { id, kind, title: widgetLabels[kind], binding: kind === 'EvidencePanel' || kind === 'Questions' ? 'selected_lead' : kind === 'RecentChanges' ? 'activity' : 'view', pinned: false, limit: 20,
       columns: ['name','company','potential','priority','confidence','eligibility'].map(field => ({ field, width: 160, visible: true })) };
     await save([{ op: 'add_widget', view_id: view!.id, widget }], `Added ${widgetLabels[kind]}`);
   }
-  async function showHistory() { const result = await api<{ items: Revision[] }>('/api/workspace/revisions'); setRevisions(result.items); setDialog('history'); }
+  async function showHistory(before?: number) { const result = await readApi<{ items: Revision[]; has_more: boolean }>(`/api/workspace/revisions${before ? `?before=${before}` : ''}`); setRevisions(previous => before ? [...previous, ...result.items] : result.items); setHistoryMore(result.has_more); setDialog('history'); }
   async function restore(target?: number) { await api('/api/workspace/restore', 'POST', { base_version: boot!.version, target_version: target ?? null }); setLayoutDraft(null); await loadBootstrap(); setDialog(null); setNotice(target ? `Restored presentation version ${target}. Lead records were not changed.` : 'Reset presentation only. Lead records and evidence are retained.'); }
   async function showJobs() { setJobs((await api<{ items: Job[] }>('/api/workspace/jobs')).items); setDialog('jobs'); }
 
+  function lockWorkspace() {
+    sessionEpoch.current++; detailRequest.current++; bootstrapLoading.current = false;
+    sessionStorage.removeItem('relay-token'); setAuthenticated(false); setBoot(null); setData(null); setDetail(null); setDetailOpen(false); setCall(null); setNoteSource(null); setDialog(null); setActiveJob(null); setSelected(new Set()); setQuery(null); setLayoutDraft(null); setToken(''); setError(''); setEditCanvas(false); setPending(false);
+  }
+
   if (!authenticated) return <main className="login-page"><div className="login-card"><div className="brand"><span className="brand-symbol">r</span>relay <small>SDR</small></div><h1>Your private sales workspace</h1><p>Use the same local admin token as the rest of Relay. It stays in this browser tab’s session storage.</p><form onSubmit={e => { e.preventDefault(); sessionStorage.setItem('relay-token', token.trim()); setError(''); setAuthenticated(true); }}><label>Workspace token<input type="password" autoComplete="off" required minLength={24} value={token} onChange={e => setToken(e.target.value)}/></label>{error && <p className="error" role="alert">{error}</p>}<button className="primary">Open workspace <Icon name="arrow"/></button></form><small>Server credentials and provider keys never belong in this field.</small></div></main>;
-  if (!boot || !view || !query) return <main className="loading-page"><span className="spinner"/><h2>Opening your saved workspace…</h2>{error && <p className="error" role="alert">{error}</p>}</main>;
+  if (!boot || !view || !query) return <main className="loading-page">{!error && <span className="spinner"/>}<h2>{error ? 'Your workspace could not be loaded' : 'Opening your saved workspace…'}</h2>{error && <><p className="error" role="alert">{error}</p><p>Your saved records and layout have not changed.</p><button onClick={() => action(loadBootstrap(true))}>Retry opening workspace</button></>}<button onClick={lockWorkspace}>Back to sign in</button></main>;
   const modelReady = boot.orchestrator.enabled_by_server && boot.orchestrator.configured && !boot.orchestrator.paused;
   const layouts = Object.fromEntries(Object.entries(layoutDraft || view.layouts).map(([bp, items]) => [bp, items.map(item => ({ ...item, minW: 4, minH: 4, maxH: 30, static: !editCanvas || view.locked || boot.spec.widgets[item.i].pinned }))]));
-  const context = data ? { viewId: view.id, bootstrap: boot, data, detail, query, selected, toggleSelection: (id: string) => setSelected(previous => { const next = new Set(previous); if (next.has(id)) next.delete(id); else next.add(id); return next; }),
+  const context = data ? { viewId: view.id, bootstrap: boot, data, dataVersion: refreshCounter, detail, query, selected, toggleSelection: (id: string) => setSelected(previous => { const next = new Set(previous); if (next.has(id)) next.delete(id); else next.add(id); return next; }),
     openLead: (id: string) => { void openLead(id); }, openCall: (id: string, reference?: Reference) => setCall({ id, reference }), evidence: showEvidence, task: (task: Task, status: string) => action(taskChange(task, status)),
     sort: (sort: Query['sort']) => { setQuery({ ...query, sort, direction: query.sort === sort && query.direction === 'desc' ? 'asc' : 'desc' }); setPage(1); }, page: setPage } : null;
   return <div className="shell">
-    <aside className="sidebar"><a className="brand" href="/#overview"><span className="brand-symbol">r</span><span>relay <small>SDR</small></span></a><span className="nav-caption">WORKSPACE</span><nav aria-label="Main navigation">{[['grid','Overview','/#overview'],['people','Leads','/leads'],['phone','Voice lab','/#lab'],['book','Playbook','/#playbook'],['clock','Calls','/#calls'],['link','Connections','/#connections']].map(([icon,name,href]) => <a key={name} href={href} className={name === 'Leads' ? 'nav-item active' : 'nav-item'} title={name}><Icon name={icon}/><span>{name}</span>{name === 'Leads' && <span className="nav-dot"/>}</a>)}</nav><div className="sidebar-bottom"><div className="workspace-avatar">R</div><div><strong>Private workspace</strong><small>Local · single operator</small></div><button className="icon-button" aria-label="Lock workspace" onClick={() => { sessionStorage.removeItem('relay-token'); setAuthenticated(false); setBoot(null); setData(null); setDetail(null); setDetailOpen(false); setCall(null); setNoteSource(null); setDialog(null); setActiveJob(null); setSelected(new Set()); setQuery(null); setLayoutDraft(null); setToken(''); }}><Icon name="lock" size={16}/></button></div></aside>
+    <aside className="sidebar"><a className="brand" href="/#overview"><span className="brand-symbol">r</span><span>relay <small>SDR</small></span></a><span className="nav-caption">WORKSPACE</span><nav aria-label="Main navigation">{[['grid','Overview','/#overview'],['people','Leads','/leads'],['phone','Voice lab','/#lab'],['book','Playbook','/#playbook'],['clock','Calls','/#calls'],['link','Connections','/#connections']].map(([icon,name,href]) => <a key={name} href={href} className={name === 'Leads' ? 'nav-item active' : 'nav-item'} title={name}><Icon name={icon}/><span>{name}</span>{name === 'Leads' && <span className="nav-dot"/>}</a>)}</nav><div className="sidebar-bottom"><div className="workspace-avatar">R</div><div><strong>Private workspace</strong><small>Local · single operator</small></div><button className="icon-button" aria-label="Lock workspace" onClick={lockWorkspace}><Icon name="lock" size={16}/></button></div></aside>
     <main className="workspace-main"><header className="topbar"><span>Workspace <span className="separator">/</span> <strong>Leads</strong></span><div><span className={`connection-dot ${modelReady ? 'online' : ''}`}/><button className="text-button" onClick={() => setDialog('settings')}>{modelReady ? 'Workspace agent connected' : 'Workspace agent needs setup'}</button><span className="version-tag">v{boot.version}</span></div></header>
       {boot.fixture_mode && <p className="notice warning fixture-banner">VERIFICATION DATASET — All people, call content and assessments shown here are fictional fixtures. No calls were placed.</p>}
       <div className="page-heading"><div><span className="eyebrow">YOUR PIPELINE, IN CONTEXT</span><h1>Leads workspace<span className="heading-dot">.</span></h1><p>Evidence you can trace. Priorities you can act on.</p></div><div className="header-actions"><button onClick={() => setDialog('import')}>Import CSV</button><button className="primary" onClick={() => setDialog('lead')}><Icon name="plus" size={16}/>Add lead</button></div></div>
@@ -209,7 +218,7 @@ export default function App() {
     {dialog === 'rubric' && <RubricEditor rubric={boot.rubric} close={() => setDialog(null)} saved={async () => { await loadBootstrap(); }}/>} 
     {dialog === 'filters' && <Modal title="Search, filter & group" close={() => setDialog(null)} wide><QueryControls query={query} onChange={value => { setQuery(value); setPage(1); }} fields={boot.fields}/><footer className="modal-actions"><button onClick={() => { setQuery(view.query); setPage(1); }}>Reset to saved query</button><button onClick={() => setDialog('duplicate')}>Save as a new view</button><button className="primary" onClick={() => { if (view.id === 'all' && (query.search || query.filters.length)) { setDialog('duplicate'); return; } action(save([{ op: 'edit_view', view_id: view.id, query }], `Saved filters for ${view.name}`).then(() => setDialog(null))); }}>Save to this view</button></footer></Modal>}
     {dialog === 'settings' && <Modal title="Workspace agent settings" close={() => setDialog(null)}><div className="settings-section"><h3>Separate from the live voice agent</h3><p>Workspace reasoning uses {boot.orchestrator.model}. It has no dialing, booking, export, suppression, or provider-configuration tools.</p><dl className="operational"><dt>Server authorization</dt><dd>{boot.orchestrator.enabled_by_server ? 'Enabled' : 'Disabled in server configuration'}</dd><dt>Model key configured</dt><dd>{boot.orchestrator.configured ? 'Yes — server side only' : 'No'}</dd><dt>Worker</dt><dd>{boot.orchestrator.running ? 'Running while this server is on' : 'Not running'}</dd><dt>New extraction chunks per run</dt><dd>{boot.orchestrator.max_chunks_per_run}</dd><dt>Daily request cap</dt><dd>{boot.orchestrator.max_daily_requests}</dd><dt>Daily reserved-token cap</dt><dd>{boot.orchestrator.max_daily_reserved_tokens}</dd></dl><p className="notice">Enabling reasoning sends relevant captured real-call text and human notes to OpenAI. Set <code>WORKSPACE_ENABLED=true</code> and a server-side <code>WORKSPACE_API_KEY</code> and <code>WORKSPACE_MODEL</code>. The workspace uses a separate explicit key setting; it does not fall back to the voice key. Restart Relay. This does not enable outbound calling.</p><button disabled={!boot.orchestrator.enabled_by_server} onClick={() => action(api('/api/workspace/settings/pause', 'POST', { paused: !boot.orchestrator.paused }).then(() => loadBootstrap()))}>{boot.orchestrator.paused ? 'Resume workspace reasoning' : 'Pause workspace reasoning'}</button></div><div className="settings-section"><h3>Organization behavior</h3><p><strong>Manual:</strong> keep agent presentation changes as proposals. <strong>Suggest:</strong> preview every agent layout change. <strong>Adaptive:</strong> apply small reversible changes to unlocked content; preview larger changes.</p><label className="check-label"><input type="checkbox" checked={boot.spec.allow_structural_auto} onChange={e => action(save([{ op: 'preferences', mode: boot.spec.mode, default_view: boot.spec.default_view, allow_structural_auto: e.target.checked }], 'Updated structural organization preference'))}/>Allow small structural changes automatically in Adaptive mode</label><label>Default saved view<select value={boot.spec.default_view} onChange={e => action(save([{ op: 'preferences', mode: boot.spec.mode, default_view: e.target.value, allow_structural_auto: boot.spec.allow_structural_auto }], 'Updated the default view'))}>{boot.spec.views.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}</select></label><p className="hint">Pinned widgets and locked views remain protected. Material changes are held while you edit, select, drag or read details.</p></div></Modal>}
-    {dialog === 'history' && <Modal title="Workspace history & restore" close={() => setDialog(null)} wide><p>Restore changes presentation only. It never deletes lead records, transcripts, assessments or tasks.</p><div className="modal-actions"><button disabled={boot.version <= 1} onClick={() => action(restore(boot.version - 1))}>Undo last workspace change</button><button onClick={() => { if (window.confirm('Reset the layout to defaults? All lead records and evidence are retained.')) action(restore()); }}>Reset layout</button></div>{revisions.map(revision => <div className="revision" key={revision.version}><div><strong>Version {revision.version} · {label(revision.actor)}</strong><p>{revision.reason}</p><small>{date(revision.created_at, boot.timezone)}</small></div><button disabled={revision.version === boot.version} onClick={() => action(restore(revision.version))}>Restore</button></div>)}</Modal>}
+    {dialog === 'history' && <Modal title="Workspace history & restore" close={() => setDialog(null)} wide><p>Restore changes presentation only. It never deletes lead records, transcripts, assessments or tasks.</p><div className="modal-actions"><button disabled={boot.version <= 1} onClick={() => action(restore(boot.version - 1))}>Undo last workspace change</button><button onClick={() => { if (window.confirm('Reset the layout to defaults? All lead records and evidence are retained.')) action(restore()); }}>Reset layout</button></div>{revisions.map(revision => <div className="revision" key={revision.version}><div><strong>Version {revision.version} · {label(revision.actor)}</strong><p>{revision.reason}</p><small>{date(revision.created_at, boot.timezone)}</small></div><button disabled={revision.version === boot.version} onClick={() => action(restore(revision.version))}>Restore</button></div>)}{historyMore && <button onClick={() => action(showHistory(revisions.at(-1)?.version))}>Load older workspace versions</button>}</Modal>}
     {dialog === 'proposals' && <Modal title="Review organization changes" close={() => setDialog(null)} wide>{boot.proposals.map(proposal => <article className="proposal" key={proposal.id}><h3>{proposal.data.reason}</h3><small>Based on workspace v{proposal.base_version}. Current: v{boot.version}.</small><pre>{JSON.stringify(proposal.data.operations, null, 2)}</pre><div className="modal-actions"><button onClick={() => action(api(`/api/workspace/proposals/${proposal.id}`, 'POST', { approve: false, base_version: boot.version }).then(() => loadBootstrap()))}>Reject</button><button className="primary" disabled={proposal.base_version !== boot.version} onClick={() => action(api(`/api/workspace/proposals/${proposal.id}`, 'POST', { approve: true, base_version: boot.version }).then(() => loadBootstrap()))}>Approve saved change</button></div>{proposal.base_version !== boot.version && <p className="notice warning">Stale proposal: it cannot overwrite your newer workspace. Reject it and issue a fresh instruction.</p>}</article>)}</Modal>}
     {dialog === 'jobs' && <Modal title="Workspace analysis runs" close={() => setDialog(null)} wide>{!jobs.length && <Empty title="No analysis runs yet" text="Configure server-side reasoning to process captured real calls. Manual controls do not require a model."/>}{jobs.map(job => <article className="revision" key={job.id}><div><div className="tags"><Badge value={job.status}/><Badge>{job.kind}</Badge></div><p>{job.error || job.result?.workspace?.reason || `Run ${job.id.slice(-8)}`}</p><small>{date(job.created_at, boot.timezone)} · {job.model} · {job.attempts} attempts</small></div>{['failed','retry','waiting_configuration'].includes(job.status) && <button onClick={() => action(api(`/api/workspace/jobs/${job.id}/retry`, 'POST').then(showJobs))}>Retry</button>}</article>)}</Modal>}
   </div>;
