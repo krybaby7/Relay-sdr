@@ -25,6 +25,16 @@ export function changeGeometry(layout: Geometry[], id: string, change: GeometryC
   if (change === 'narrower') item.w = Math.max(4, item.w - 1);
   if (change === 'taller') item.h = Math.min(30, item.h + 1);
   if (change === 'shorter') item.h = Math.max(4, item.h - 1);
+  return settleGeometry(next, id, pinned);
+}
+
+/** react-grid-layout's noCompactor preserves gaps but does not displace peers
+ * after a southeast resize. Normalize the stopped pointer gesture explicitly,
+ * using the same collision and pin rules as the keyboard controls.
+ */
+export function settleGeometry(layout: Geometry[], id: string, pinned: Set<string>): Geometry[] {
+  const next = structuredClone(layout); const item = next.find(g => g.i === id);
+  if (!item || pinned.has(id)) throw new Error('This widget is not movable.');
   const fixed = next.filter(g => pinned.has(g.i));
   if (fixed.some(g => overlaps(item, g))) throw new Error('That change would overlap a pinned widget. Move elsewhere or unpin it first.');
   const placed = [...fixed, item];

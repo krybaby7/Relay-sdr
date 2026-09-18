@@ -720,3 +720,61 @@ def test_legacy_six_table_migration_is_idempotent_and_preserves_protected_record
     assert evidence.metadata(store, call['id']) == before
     assert len(queries.lead_detail(store, lead['id'])['notes']) == 1
     store.close()
+
+
+@pytest.mark.parametrize('setting', ['model', 'prompt', 'schema'])
+def test_restart_version_change_supersedes_cached_work_not_its_provenance(ws, monkeypatch, setting):
+    import app.workspace.worker as module
+    store, _, model, new_worker = ws
+    lead, _ = add_real_fixture(store)
+    old = new_worker()
+    old.scan()
+    job = dict(store.conn.execute('SELECT * FROM ws_jobs').fetchone())
+    old.close()
+    options = {}
+    if setting == 'model':
+        options['workspace_model'] = 'mock-new-model'
+    elif setting == 'prompt':
+        monkeypatch.setattr(module, 'PROMPT_VERSION', 'test-new-prompt')
+    else:
+        monkeypatch.setattr(module, 'SCHEMA_VERSION', 'test-new-schema')
+    fresh = new_worker(**options)
+    run_all(fresh, store)
+    assert store.conn.execute('SELECT status FROM ws_jobs WHERE id=?', (job['id'],)).fetchone()[0] == 'superseded'
+    succeeded = dict(store.conn.execute("SELECT * FROM ws_jobs WHERE status='succeeded'").fetchone())
+    assert succeeded['model'] == fresh.config.workspace_model
+    assert succeeded['prompt_version'] == module.PROMPT_VERSION
+    assert succeeded['schema_version'] == module.SCHEMA_VERSION
+    assert assessment(store, lead['id'])['potential'] == 'strong'
+    assert len(model.requests) == 2  # stale work never contacted the mock provider
+
+
+def test_old_model_command_is_not_replayed_under_new_model(ws):
+    store, _, model, new_worker = ws
+    old = new_worker()
+    before = presentation.current(store)
+    queued = old.enqueue_command('Fictional command', 'all', before['version'])
+    old.close()
+    fresh = new_worker(workspace_model='mock-new-model')
+    assert fresh.tick()
+    assert store.conn.execute('SELECT status FROM ws_jobs WHERE id=?', (queued['id'],)).fetchone()[0] == 'superseded'
+    assert presentation.current(store) == before
+    assert model.requests == []
+
+
+def test_chunk_boundary_changes_cannot_reuse_wrong_source_slice(ws):
+    store, _, model, new_worker = ws
+    lead, _ = add_real_fixture(store, text=(TEXT + ' ') * 20)
+    first = new_worker(workspace_chunk_chars=1000, workspace_max_chunks=1)
+    assert first.tick()
+    assert len(model.requests) == 1
+    first.close()
+    second = new_worker(workspace_chunk_chars=2000, workspace_max_chunks=20)
+    run_all(second, store)
+    extractions = [payload for stage, payload in model.requests if stage == 'extract']
+    assert len(extractions) > 1
+    assert sum(len(source['text']) for source in extractions[1]['sources']) > 1000
+    data = assessment(store, lead['id'])
+    assert data['coverage']['all_chunks_processed']
+    assert data['coverage']['processed_characters'] == data['coverage']['total_characters']
+    assert store.all('outbox') == []

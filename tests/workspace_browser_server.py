@@ -7,6 +7,7 @@ Recovered from the interrupted continuation execution record; rerun verification
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import sys
 import tempfile
@@ -21,6 +22,7 @@ from app.main import create_app
 from app.models import LeadInput
 from app.workspace import presentation
 from app.workspace.schema import ChangeSet
+from app.workspace.model import ModelUnavailable
 from workspace_fixtures import FixtureModel, add_real_fixture
 import uvicorn
 
@@ -34,6 +36,26 @@ class BrowserModel(FixtureModel):
         if stage == 'plan' and payload.get('operator_command'):
             command = payload['operator_command'].lower()
             self.requests.append((stage, payload))
+            if 'unavailable' in command:
+                raise ModelUnavailable('Deterministic fixture: workspace provider is unavailable.')
+            if 'canvas' in command:
+                view = next(v for v in payload['workspace']['views'] if v['id'] == payload['current_view_id'])
+                layouts = copy.deepcopy(view['layouts'])
+                if 'adjust unpinned' in command:
+                    movable = next(key for key in view['widgets'] if not payload['workspace']['widgets'][key]['pinned'])
+                    for geometry in layouts.values():
+                        item = next(g for g in geometry if g['i'] == movable)
+                        item['y'] = max(g['y'] + g['h'] for g in geometry) + 2
+                else:
+                    order = [view['widgets'][-1], *view['widgets'][:-1]]
+                    for bp, geometry in layouts.items():
+                        cursor = 0
+                        for key in order:
+                            item = next(g for g in geometry if g['i'] == key)
+                            item.update(x=0, y=cursor, w={'lg': 12, 'md': 8, 'sm': 4}[bp])
+                            cursor += item['h'] + 2
+                return {'data': {'reason': 'Deterministic fixture: persisted geometry change, not live model quality.',
+                                 'operations': [{'op': 'set_layout', 'view_id': view['id'], 'layouts': layouts}]}, 'total_tokens': 10}
             if 'failure' in command:
                 return {'data': {'reason': 'Rejected fixture output', 'operations': [{'op': 'dial', 'number': 'never'}]}}
             if 'proposal' in command:

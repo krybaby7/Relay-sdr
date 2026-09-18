@@ -116,3 +116,46 @@ calling, provider destinations and recording settings remain unchanged.
 Next: complete AI geometry/manual pin/lock/reload flows, board/column/history and
 error-recovery coverage; security/resilience audit, full rerun, setup/architecture/
 license documentation, actual screenshots and an unmerged pull request.
+
+
+## Final implementation milestone — 2026-09-18
+
+Continued from newer native head 152dcbcd41f307e53710893ae5f3c30af3648ee6,
+preserving main and the original recovery. Completed the shared manual/AI
+acceptance flow rather than stopping at the original three failed lookups.
+
+Added actual model-planned geometry fixtures; keyboard/pointer collision
+handling with protected pins; correct initial mobile breakpoint; complete
+small-screen navigation and tab locking; board-only pagination; history,
+column controls, proposals/locks, read/model failure recovery and stale-edit
+acceptance coverage. Worker resume now rejects changed model/prompt/schema
+provenance, and extraction-cache keys include source-chunk content.
+Documentation covers setup, actual library/license integration, evidence,
+retention limits, configuration and every original requirement category.
+Native CI uses the real lockfile/build/fixtures, not restoration scripts.
+
+Local verification of these exact source blobs: integrity passed; backend
+169 passed, one upstream AnyIO deprecation warning (15.83s); typecheck,
+lint, production build passed; geometry unit tests 8 passed; desktop/mobile
+Chromium 20 passed (3.5m), zero retries/skips. Command:
+`python scripts/verify_workspace.py --output /mnt/data/relay-final-verification`.
+The local environment used Python 3.13.5, Node 22, the pinned dependencies,
+RELAY_TEST_PYTHON pointing to its isolated venv and PLAYWRIGHT_BROWSERS_PATH
+pointing to its installed Chromium. Build ran before browsers.
+
+Exploratory expanded tests exposed two genuine failures: pointer resize
+left overlapping panels and keyboard mobile edits selected lg instead of
+initial sm. Both were repaired, then the full suite rerun without skips or
+relaxed layout validation. GitHub publication checks full patch hashes,
+parent/result blobs and unchanged recovery. One detected patch-transfer
+punctuation typo was corrected before those checks; no malformed native
+source was published. New one-time publication inputs are removed after
+applying; older recovery scripts are not executed.
+
+Fresh clean-checkout results and screenshots will be recorded separately
+below and under verification/acceptance-2026-09-18. No live model/provider,
+real lead contact, recording change, public deployment, main change, merge
+or force push. Remaining verification boundaries: live reasoning quality,
+real voice/PSTN, physical mobile/Safari/Firefox, load/security/compliance
+certification, retention operations and multi-process use. These are not
+claimed verified. Final delivery includes an unmerged pull request.

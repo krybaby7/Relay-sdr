@@ -2,7 +2,9 @@
 
 A local-first, browser-based AI sales-development workspace, built around the **new GPT-Live API**, with a Twilio outbound-call connector and separate CRM data endpoints.
 
-**Release:** 0.1.0 · 16 September 2026 · single-user pilot, not a production calling platform.
+**AI-managed leads workspace · 18 September 2026 · single-user, single-process pilot.**
+
+The workspace is implemented and has deterministic acceptance coverage; it is not a production calling release. See [workspace setup and architecture](docs/WORKSPACE-ARCHITECTURE.md), [requirements coverage](docs/WORKSPACE-ACCEPTANCE.md), and the committed verification logs under `verification/acceptance-2026-09-18/`. Earlier verification documents describe the September 16 baseline, not this feature.
 
 The source is runnable. No API keys, provider accounts, lead lists, customer data, or live-call authorization are included. **No real calls were placed during development.** All provider-path tests use mocks. Read `docs/VERIFICATION.md` for the exact checks and gaps.
 
@@ -10,7 +12,9 @@ The source is runnable. No API keys, provider accounts, lead lists, customer dat
 
 | Area | Implemented behavior |
 | --- | --- |
-| Workspace | Responsive dashboard, private token login, no invented performance data |
+| Workspace | Persistent shared AI/manual views, responsive draggable canvas, keyboard alternatives, pins/locks, proposals, history, undo/reset, private token login, real backend aggregates |
+| Lead intelligence | Evidence-linked cumulative assessments; potential, priority, coverage and eligibility kept separate; confirmed human corrections; internal commitments; paginated call/source/history details; typed custom fields |
+| Background reasoning | Separate optional Responses model, durable SQLite jobs and LangGraph checkpoints, bounded retries/chunks/budgets, stale-write rejection, explicit gaps, no outbound tools |
 | Leads | Manual add/edit, validated E.164 numbers, timezone, consent evidence, CSV import with per-row errors, deduplication by number, irreversible do-not-call entries in the app |
 | Playbook | Company/product/facts, qualification questions, next-step goal, voice/language/tone, allowed calling days and hours, operator approval |
 | Voice lab | No-key text-only scripted preview, plus browser microphone/PCM bridge to GPT-Live when a server API key is supplied |
@@ -24,7 +28,7 @@ The source is runnable. No API keys, provider accounts, lead lists, customer dat
 
 ## Start locally
 
-Use Python **3.11 or newer**. Development tests ran on Python 3.13.5. The browser interface is plain HTML/CSS/JavaScript: there is no Node build step or CDN dependency.
+Use Python **3.11 or newer**. Development tests ran on Python 3.13.5. The `/leads` interface uses React and TypeScript. Compiled assets are committed in `web/workspace`, so normal local use needs only Python and one server, with no CDN. To change or rebuild the frontend, use Node 22 and the commands below. Other Relay sections retain their original interface.
 
 ### macOS / Linux
 
@@ -54,6 +58,52 @@ If port 8080 is occupied, change `PORT` in `.env`. Restart after configuration c
 First try **Voice lab → Run scripted preview**. It makes no model request, microphone request, or telephone call. Fictional sample contacts are optional and are explicitly blocked from live dialing.
 
 The backend must remain running. Closing the browser does not shut down the server. This package is not a deployed web service, hosted demo, mobile APK, or desktop installer.
+
+## Use and build the AI-managed leads workspace
+
+Open **Leads** or `/leads`. Manual search, fields, views, widgets, layouts and evidence inspection work without a model key. The workspace starts with Adaptive presentation preferences, but server-side reasoning remains **disabled until explicitly configured**.
+
+To enable only internal workspace reasoning, edit your private `.env`:
+
+```dotenv
+WORKSPACE_ENABLED=true
+WORKSPACE_API_KEY=your_separate_server_side_key
+WORKSPACE_MODEL=your_project_model_with_strict_structured_outputs
+WORKSPACE_TIMEZONE=UTC
+ENABLE_OUTBOUND=false
+```
+
+`WORKSPACE_MODEL` above is a placeholder, not a model identifier. Choose a Responses model available in your project with strict Structured Outputs support. There is no silent model/key substitution. Restart the server. Approve accurate product facts in Playbook and review the workspace qualification rubric before treating assessments as qualified. Enabling reasoning sends relevant stored real-call text and human notes to OpenAI; it does not enable dialing, messaging, recording or webhook approval.
+
+**Manual** keeps presentation changes as proposals. **Suggest** previews each agent presentation change. **Adaptive** applies small, validated, reversible changes, but larger/structural changes require approval unless the operator explicitly allows small structural changes. Pins and locks remain protected. Pause reasoning in agent settings to stop new processing; an already executing request may finish. The server must stay running for background processing.
+
+Use **Customize canvas** to add/configure/remove widgets, drag or resize with the pointer, or use the labelled Up/Down/Wider/Narrower/Taller/Shorter buttons. Save the layout. Use the view definition to rename, duplicate, group/filter, or emphasize a detail section. **More workspace options** includes history/undo/reset, custom fields, rubric, and view locking. On small screens, **Menu** preserves all application sections and the tab-lock action.
+
+To rebuild the committed application assets:
+
+```bash
+cd frontend
+npm ci
+npm run typecheck
+npm run lint
+npm run test:unit
+npm run build
+cd ..
+python run.py
+```
+
+`npm run build` writes `web/workspace`; the existing FastAPI server serves it. No separate frontend development server is required. Dependency versions are pinned in the npm lockfile and Python requirements/constraints. For the complete deterministic check, install development requirements and Chromium, then run:
+
+```bash
+python -m pip install -r requirements-dev.txt
+npm ci --prefix frontend
+cd frontend
+npx playwright install chromium
+cd ..
+python scripts/verify_workspace.py --output verification/local
+```
+
+The browser fixture creates a disposable loopback-only database for every test, uses a clearly labelled deterministic model, and never contacts a provider. The verifier **builds before testing browsers**. Fixture orchestration proves application behavior, not live model reasoning quality.
 
 ## Enable a real browser voice test
 
@@ -116,7 +166,7 @@ The server rechecks live dialing enabled, required configuration present, approv
 
 Daily limits count **telephone attempts**, including failed attempts, by UTC creation date. They do not limit the total number of browser practice sessions. OpenAI and telephone charges are external to this application; duration caps are not a currency-denominated spending cap. Configure provider-account budgets and inspect real usage separately.
 
-Only one application process / Uvicorn worker may use a workspace. There is no distributed lock, job queue, or multi-worker support.
+Only one application process / Uvicorn worker may use a workspace. The workspace has a durable local analysis job queue, **not** a distributed dialing queue, distributed lock, or multi-worker deployment model.
 
 ### Unknown call state: do not blindly redial
 
@@ -140,7 +190,7 @@ The workspace token gives broad local operator access. Do not give it to a CRM o
 
 - Provider keys are loaded from server environment variables and never returned by the dashboard API.
 - A generated operator token is stored at `.data/admin-token`; the browser stores it in tab-scoped sessionStorage after login. Use the avatar/Lock action to clear the browser copy. Anyone with that token can access the workspace: there are no user accounts, MFA, roles, or per-user audit controls.
-- `.data/relay.sqlite3` stores contact details, consent assertions, transcript fragments, call summaries, playbook snapshots, suppression, tool deduplication, and outbox state. It is **not encrypted at rest**. Protect the machine, filesystem, `.env`, backups, and terminal logs. Disk/WAL files may retain data; there is no retention scheduler or erasure workflow in this pilot.
+- `.data/relay.sqlite3` stores contact details, consent assertions, transcript fragments, call summaries, playbook snapshots, suppression, tool deduplication, and outbox state. It is **not encrypted at rest**. Protect the machine, filesystem, `.env`, backups, and terminal logs. The workspace adds a separate `workspace-checkpoints.sqlite3` database. Controlled source correction/redaction and derived-data invalidation are available, but there is no retention scheduler or comprehensive erasure of independent notes, labels, backups or external provider copies. See the workspace architecture document for the precise scope.
 - The app does not persist audio files; Twilio call creation requests `Record=false`. That does not determine OpenAI/Twilio retention, logging, or organizational settings. Review those independently.
 - Browser practice can use a lead as rehearsal context but never updates that lead's sales status, permanently suppresses it, or publishes an external outcome. Practice calls still save their own transcript/notes.
 - Outbound webhook targets are fixed in trusted server configuration. The model cannot supply a URL, telephone destination, or arbitrary HTTP operation. Outbox transmission requires operator approval. Do not configure a destination you do not control or trust.
@@ -170,11 +220,13 @@ app/policy.py              real-dial gates
 app/telephony.py            fixed-origin Twilio REST and signatures
 app/live.py                 GPT-Live bridge and delegated sales tools
 app/main.py                 authenticated APIs, callback/media routes
-web/                        responsive UI + AudioWorklet
+app/workspace/             evidence, intelligence, shared spec, durable worker and APIs
+frontend/                  React/TypeScript sources, pinned lockfile and browser tests
+web/                       compiled workspace + existing UI and AudioWorklet
 tests/                     local automated and browser checks
 docs/                      integration contract, API research, verification
 ```
 
 ## Before treating this as production
 
-Account-backed voice/PSTN tests, broader security review, operational monitoring, retention controls, provider budget enforcement, user management, deployment hardening, supervised unknown-call reconciliation, durable queues, thorough opt-out evaluation, audio/latency measurement, confirmed calendar integration, human-transfer integration, and chosen-country compliance review are still needed. Do not market this pilot as universally connected, legally certified, or ready for unattended mass calling.
+Account-backed voice/PSTN tests, broader security review, operational monitoring, retention controls, provider budget enforcement, user management, deployment hardening, supervised unknown-call reconciliation, production queue operations, thorough live opt-out evaluation, audio/latency measurement, confirmed calendar integration, human-transfer integration, and chosen-country compliance review are still needed. Do not market this pilot as universally connected, legally certified, or ready for unattended mass calling.

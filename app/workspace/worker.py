@@ -166,7 +166,7 @@ class WorkspaceWorker:
                                                  now - self.config.workspace_settle_seconds)).fetchall()
             rubric = self.store.get_setting('ws_rubric')
             for row in rows:
-                dedupe = f"lead:{row['lead_id']}:{row['generation']}:{rubric['version']}:{PROMPT_VERSION}:{self.config.workspace_model}"
+                dedupe = f"lead:{row['lead_id']}:{row['generation']}:{rubric['version']}:{PROMPT_VERSION}:{SCHEMA_VERSION}:{self.config.workspace_model}"
                 self._enqueue('analysis', row['lead_id'], row['generation'], dedupe, {})
 
     def tick(self):
@@ -219,7 +219,7 @@ class WorkspaceWorker:
             self._finish(job, 'retry', error='Bounded extraction slice saved; continuing remaining source chunks.',
                          available_at=time.time() + self.config.workspace_poll_seconds)
         except StaleRun:
-            self._finish(job, 'superseded', error='Newer evidence, corrections, or rubric superseded this run.')
+            self._finish(job, 'superseded', error='Newer evidence, corrections, rubric, or model/schema configuration superseded this run.')
         except presentation.Conflict:
             self._finish(job, 'superseded', error='Workspace changed during planning; the stale plan was not published.')
         except ModelUnavailable as exc:
@@ -258,12 +258,22 @@ class WorkspaceWorker:
             if not row or row['status'] == 'superseded':
                 raise StaleRun()
             result = dict(row)
+            self.assert_runtime(result)
             result['payload'] = json.loads(result['payload'])
             if result['lead_id']:
                 self.assert_fresh(result)
             return result
 
+    def assert_runtime(self, job):
+        # Never resume a draft/checkpoint under another model or schema while
+        # labeling its output as the old configuration. Analysis will be queued
+        # afresh by scan(); operator commands require explicit resubmission.
+        if (job['model'] != self.config.workspace_model or
+                job['prompt_version'] != PROMPT_VERSION or job['schema_version'] != SCHEMA_VERSION):
+            raise StaleRun()
+
     def assert_fresh(self, job):
+        self.assert_runtime(job)
         head = self.store.conn.execute('SELECT generation FROM ws_heads WHERE lead_id=?', (job['lead_id'],)).fetchone()
         rubric = self.store.get_setting('ws_rubric')
         if not head or head['generation'] != job['generation'] or rubric['version'] != job['rubric_version']:
@@ -317,6 +327,7 @@ class WorkspaceWorker:
     def model_request(self, job, stage, payload, output_model):
         if self.stop_event.is_set():
             raise Stopping()
+        self.assert_runtime(job)
         encoded = json.dumps(payload, ensure_ascii=False).encode()
         if len(encoded) > 160000:
             raise ModelFailure('Bounded workspace context exceeds the application limit.')
@@ -374,7 +385,8 @@ class WorkspaceWorker:
             coverage['total_characters'] += sum(len(source['text']) for source in chunk)
             self.job(state)
             key = intelligence.digest([call_id or job['lead_id'], revision, n, rubric['version'],
-                                       intelligence.digest(book_context), PROMPT_VERSION, self.config.workspace_model])
+                                       intelligence.digest(book_context), PROMPT_VERSION, SCHEMA_VERSION,
+                                       self.config.workspace_model, intelligence.digest(chunk)])
             with self.store.lock:
                 cache = self.store.conn.execute('SELECT data FROM ws_extractions WHERE cache_key=?', (key,)).fetchone()
             if cache:

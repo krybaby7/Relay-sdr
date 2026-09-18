@@ -8,7 +8,7 @@ import { Badge, Empty, Icon, Modal, WidgetBoundary } from './ui';
 import { registry, WorkspaceData } from './catalog';
 import { AddWidget, FieldEditor, ImportEditor, LeadEditor, QueryControls, RubricEditor, ViewEditor, WidgetEditor, widgetLabels } from './editors';
 import { CallViewer, LeadDetail, NoteViewer } from './details';
-import { changeGeometry } from './geometry';
+import { changeGeometry, settleGeometry } from './geometry';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import './style.css';
@@ -27,10 +27,14 @@ const definitions: Record<string, string> = {
   practice: 'Fictional samples and browser/demo call history, isolated from real pipeline intelligence.',
 };
 
-function MeasuredGrid(props: Omit<ResponsiveGridLayoutProps<Breakpoint>, 'width'>) {
-  // This component mounts with its element present; the login/loading shell does not.
+function MeasuredGrid({ onBreakpointChange, ...props }: Omit<ResponsiveGridLayoutProps<Breakpoint>, 'width'>) {
   const { width, containerRef, mounted } = useContainerWidth({ measureBeforeMount: true });
-  return <div ref={containerRef}>{mounted && <Responsive<Breakpoint> {...props} width={width}/>}</div>;
+  // RGL reports breakpoint transitions, not necessarily the initial breakpoint.
+  // Manual commands must use the measured container, including first mobile load.
+  useEffect(() => {
+    if (mounted) { const bp = width >= 1000 ? 'lg' : width >= 700 ? 'md' : 'sm'; onBreakpointChange?.(bp, COLS[bp]); }
+  }, [mounted, width, onBreakpointChange]);
+  return <div ref={containerRef}>{mounted && <Responsive<Breakpoint> {...props} onBreakpointChange={onBreakpointChange} width={width}/>}</div>;
 }
 
 export default function App() {
@@ -43,7 +47,7 @@ export default function App() {
   const [selected, setSelected] = useState<Set<string>>(new Set()); const [dialog, setDialog] = useState<Dialog>(null); const [widgetId, setWidgetId] = useState('');
   const [command, setCommand] = useState(''); const [activeJob, setActiveJob] = useState<Job | null>(null); const [jobs, setJobs] = useState<Job[]>([]); const [revisions, setRevisions] = useState<Revision[]>([]); const [historyMore, setHistoryMore] = useState(false);
   const [pending, setPending] = useState(false); const [refreshCounter, setRefreshCounter] = useState(0); const [dragging, setDragging] = useState(false); const [layoutDraft, setLayoutDraft] = useState<Layouts | null>(null);
-  const [breakpoint, setBreakpoint] = useState<Breakpoint>('lg'); const [editCanvas, setEditCanvas] = useState(false);
+  const [breakpoint, setBreakpoint] = useState<Breakpoint>('lg'); const [editCanvas, setEditCanvas] = useState(false); const [gridReset, setGridReset] = useState(0);
   const bootstrapLoading = useRef(false); const sessionEpoch = useRef(0);
   const detailRequest = useRef(0); const busy = useRef(false); const lastInteraction = useRef(0); const bootRef = useRef(boot); const queryRef = useRef(query); const viewRef = useRef(viewId); const detailRef = useRef(detail);
   bootRef.current = boot; queryRef.current = query; viewRef.current = viewId; detailRef.current = detail;
@@ -137,7 +141,18 @@ export default function App() {
       setActiveJob({ ...result, kind: 'command', attempts: 0, error: null, lead_id: null, model: boot.orchestrator.model, created_at: new Date().toISOString(), result: null }); setCommand('');
     } catch (e) { setError((e as Error).message); }
   }
-  function captureLayout(layout: Layout) { if (!view) return; setLayoutDraft({ ...(layoutDraft || view.layouts), [breakpoint]: stripLayout(layout) }); setDragging(false); }
+  function captureLayout(layout: Layout, movedId?: string) {
+    if (!view || !movedId) { setDragging(false); return; }
+    try {
+      const base = layoutDraft || view.layouts; const raw = stripLayout(layout);
+      const pins = new Set(Object.values(boot!.spec.widgets).filter(w => w.pinned).map(w => w.id));
+      for (const item of base[breakpoint].filter(g => pins.has(g.i))) {
+        if (JSON.stringify(raw.find(g => g.i === item.i)) !== JSON.stringify(item)) throw new Error('Pinned geometry cannot be displaced.');
+      }
+      setLayoutDraft({ ...base, [breakpoint]: settleGeometry(raw, movedId, pins) }); setError('');
+    } catch (e) { setError((e as Error).message); setGridReset(n => n + 1); }
+    finally { setDragging(false); }
+  }
   function keyboardGeometry(id: string, change: 'up' | 'down' | 'wider' | 'narrower' | 'taller' | 'shorter') {
     if (!view || view.locked) return;
     try {
@@ -169,7 +184,7 @@ export default function App() {
     openLead: (id: string) => { void openLead(id); }, openCall: (id: string, reference?: Reference) => setCall({ id, reference }), evidence: showEvidence, task: (task: Task, status: string) => action(taskChange(task, status)),
     sort: (sort: Query['sort']) => { setQuery({ ...query, sort, direction: query.sort === sort && query.direction === 'desc' ? 'asc' : 'desc' }); setPage(1); }, page: setPage } : null;
   return <div className="shell">
-    <aside className="sidebar"><a className="brand" href="/#overview"><span className="brand-symbol">r</span><span>relay <small>SDR</small></span></a><span className="nav-caption">WORKSPACE</span><nav aria-label="Main navigation">{[['grid','Overview','/#overview'],['people','Leads','/leads'],['phone','Voice lab','/#lab'],['book','Playbook','/#playbook'],['clock','Calls','/#calls'],['link','Connections','/#connections']].map(([icon,name,href]) => <a key={name} href={href} className={name === 'Leads' ? 'nav-item active' : 'nav-item'} title={name}><Icon name={icon}/><span>{name}</span>{name === 'Leads' && <span className="nav-dot"/>}</a>)}</nav><div className="sidebar-bottom"><div className="workspace-avatar">R</div><div><strong>Private workspace</strong><small>Local · single operator</small></div><button className="icon-button" aria-label="Lock workspace" onClick={lockWorkspace}><Icon name="lock" size={16}/></button></div></aside>
+    <aside className="sidebar"><a className="brand" href="/#overview"><span className="brand-symbol">r</span><span>relay <small>SDR</small></span></a><span className="nav-caption">WORKSPACE</span><nav aria-label="Main navigation">{[['grid','Overview','/#overview'],['people','Leads','/leads'],['phone','Voice lab','/#lab'],['book','Playbook','/#playbook'],['clock','Calls','/#calls'],['link','Connections','/#connections']].map(([icon,name,href]) => <a key={name} href={href} className={name === 'Leads' ? 'nav-item active' : 'nav-item'} title={name}><Icon name={icon}/><span>{name}</span>{name === 'Leads' && <span className="nav-dot"/>}</a>)}</nav><details className="mobile-navigation"><summary aria-label="Open navigation">Menu</summary><nav aria-label="Mobile navigation">{[["Overview","/#overview"],["Leads","/leads"],["Voice lab","/#lab"],["Playbook","/#playbook"],["Calls","/#calls"],["Connections","/#connections"]].map(([name,href]) => <a key={name} href={href}>{name}</a>)}<button onClick={lockWorkspace}>Lock workspace</button></nav></details><div className="sidebar-bottom"><div className="workspace-avatar">R</div><div><strong>Private workspace</strong><small>Local · single operator</small></div><button className="icon-button" aria-label="Lock workspace" onClick={lockWorkspace}><Icon name="lock" size={16}/></button></div></aside>
     <main className="workspace-main"><header className="topbar"><span>Workspace <span className="separator">/</span> <strong>Leads</strong></span><div><span className={`connection-dot ${modelReady ? 'online' : ''}`}/><button className="text-button" onClick={() => setDialog('settings')}>{modelReady ? 'Workspace agent connected' : 'Workspace agent needs setup'}</button><span className="version-tag">v{boot.version}</span></div></header>
       {boot.fixture_mode && <p className="notice warning fixture-banner">VERIFICATION DATASET — All people, call content and assessments shown here are fictional fixtures. No calls were placed.</p>}
       <div className="page-heading"><div><span className="eyebrow">YOUR PIPELINE, IN CONTEXT</span><h1>Leads workspace<span className="heading-dot">.</span></h1><p>Evidence you can trace. Priorities you can act on.</p></div><div className="header-actions"><button onClick={() => setDialog('import')}>Import CSV</button><button className="primary" onClick={() => setDialog('lead')}><Icon name="plus" size={16}/>Add lead</button></div></div>
@@ -193,9 +208,9 @@ export default function App() {
       {editCanvas && <div className="canvas-help"><span><Icon name="grid" size={16}/>Drag panel headers or resize corners. Keyboard move and size controls are also available.</span><button onClick={() => setDialog('add_widget')} disabled={view.locked}><Icon name="plus" size={15}/>Add widget</button></div>}
       {layoutDraft && <div className="layout-savebar"><strong>Layout changes are not saved yet</strong><span>Breakpoint: {breakpoint} · pins and IDs preserved</span><button onClick={() => setLayoutDraft(null)}>Discard</button><button className="primary" onClick={() => action(save([{ op: 'set_layout', view_id: view.id, layouts: layoutDraft }], `Saved ${view.name} layout`))}>Save layout</button></div>}
       <div className={`workspace-canvas ${loading ? 'refreshing' : ''}`} aria-busy={loading}>{!data || !context ? <div className="skeleton-grid"><div/><div/><div/></div> : <WorkspaceData.Provider value={context}><JSONUIProvider registry={registry} initialState={{}} handlers={{}}>
-        {<MeasuredGrid layouts={layouts} breakpoints={{ lg: 1000, md: 700, sm: 0 }} cols={COLS} rowHeight={28} margin={[16,16]} containerPadding={[0,0]} compactor={noCompactor}
+        {<MeasuredGrid key={`${view.id}:${gridReset}`} layouts={layouts} breakpoints={{ lg: 1000, md: 700, sm: 0 }} cols={COLS} rowHeight={28} margin={[16,16]} containerPadding={[0,0]} compactor={noCompactor}
           dragConfig={{ enabled: editCanvas && !view.locked, handle: '.widget-drag-handle', cancel: 'button,input,select,a,summary' }} resizeConfig={{ enabled: editCanvas && !view.locked }}
-          onBreakpointChange={setBreakpoint} onDragStart={() => setDragging(true)} onResizeStart={() => setDragging(true)} onDragStop={captureLayout} onResizeStop={captureLayout}>
+          onBreakpointChange={setBreakpoint} onDragStart={() => setDragging(true)} onResizeStart={() => setDragging(true)} onDragStop={(layout, _old, item) => captureLayout(layout, item?.i)} onResizeStop={(layout, _old, item) => captureLayout(layout, item?.i)}>
           {view.widgets.map(id => { const widget = boot.spec.widgets[id]; return <section className={`widget ${widget.pinned ? 'pinned' : ''}`} key={id} data-widget-id={id} aria-label={widget.title}>
             <header className="widget-header"><div className="widget-drag-handle"><Icon name={widget.kind === 'CallTimeline' ? 'phone' : widget.kind === 'Commitments' ? 'clock' : widget.kind === 'EvidencePanel' ? 'link' : 'grid'} size={16}/><h2>{widget.title}</h2>{widget.pinned && <span title="Pinned against agent changes"><Icon name="pin" size={13}/></span>}</div><div><button className="icon-button" aria-label={`${widget.pinned ? 'Unpin' : 'Pin'} ${widget.title}`} disabled={view.locked} onClick={() => action(save([{ op: 'pin_widget', view_id: view.id, widget_id: id, pinned: !widget.pinned }], `${widget.pinned ? 'Unpinned' : 'Pinned'} ${widget.title}`))}><Icon name="pin" size={14}/></button>{editCanvas && <button className="icon-button" aria-label={`Configure ${widget.title}`} disabled={view.locked} onClick={() => { setWidgetId(id); setDialog('widget'); }}><Icon name="sliders" size={14}/></button>}</div></header>
             {editCanvas && <div className="keyboard-layout" aria-label={`Keyboard controls for ${widget.title}`}>{(['up','down','wider','narrower','taller','shorter'] as const).map(change => <button key={change} aria-label={`${change[0].toUpperCase() + change.slice(1)} ${widget.title}`} disabled={widget.pinned || view.locked} onClick={() => keyboardGeometry(id, change)}>{label(change)}</button>)}<button className="danger-text" aria-label={`Remove ${widget.title}`} disabled={view.locked || widget.pinned} onClick={() => action(save([{ op: 'remove_widget', view_id: view.id, widget_id: id }], `Removed ${widget.title}; records retained`))}>Remove</button></div>}
