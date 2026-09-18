@@ -104,7 +104,6 @@ function lab(){
  ${canTest?'':`<div class="info-box amber">${!live.key_configured?'For an actual voice test, set <code>OPENAI_API_KEY</code> in the server’s <code>.env</code> file and restart.':'Browser microphone tests are turned off above.'}</div>`}</div>
  <section class="card"><div class="card-head"><div><h3>The conversation</h3><p id="transcript-caption">${labState.kind==='demo'?'Scripted example · not AI-generated':'Transcript fragments appear as they arrive.'}</p></div>${icon('message')}</div><div id="transcript" class="transcript"></div><div class="safe-note">${icon('shield')}This app stores text notes, not audio recordings. A real voice test sends audio to OpenAI and uses billable API services.</div></section></div>`;
 }
-}
 function renderTranscript(){
  const container=$('#transcript'); if(!container)return;
  if(!labState.fragments.length){container.innerHTML='<div class="transcript-empty">'+icon('message')+'<span>A space for the conversation.<br>Your transcript will appear here.</span></div>';return;}

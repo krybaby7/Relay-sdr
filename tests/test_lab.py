@@ -18,6 +18,14 @@ from conftest import TOKEN
 GROK_RESPONSES = 'https://api.x.ai/v1/responses'
 
 
+def test_lab_app_js_parses():
+    import subprocess
+    from pathlib import Path
+    script = Path(__file__).resolve().parents[1] / 'web' / 'app.js'
+    result = subprocess.run(['node', '-c', str(script)], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+
+
 def test_lab_state_shows_live_and_grok_without_secrets(client, config):
     config.workspace_key = 'xai-secret-must-never-appear'
     body = client.get('/api/state')
