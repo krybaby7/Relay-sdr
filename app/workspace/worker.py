@@ -21,7 +21,7 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 from ..db import uid, now_iso
 from . import evidence, intelligence, presentation, queries
 from .schema import Extraction, Plan, ChangeSet, Query
-from .model import ResponsesModel, ModelUnavailable, ModelFailure, PROMPT_VERSION, SCHEMA_VERSION
+from .model import ResponsesModel, ModelUnavailable, ModelFailure, PROMPT_VERSION, PROVIDER, SCHEMA_VERSION
 
 
 class StaleRun(RuntimeError):
@@ -98,7 +98,8 @@ class WorkspaceWorker:
                 'max_daily_requests': self.config.workspace_daily_requests,
                 'max_daily_reserved_tokens': self.config.workspace_daily_tokens,
                 'processing': 'single_process_while_server_runs', 'running': self.running,
-                'prompt_version': PROMPT_VERSION, 'schema_version': SCHEMA_VERSION}
+                'prompt_version': PROMPT_VERSION, 'schema_version': SCHEMA_VERSION,
+                'provider': PROVIDER}
 
     async def loop(self):
         self.running = True

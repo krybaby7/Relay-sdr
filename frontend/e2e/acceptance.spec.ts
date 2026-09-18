@@ -232,7 +232,7 @@ test.describe('complete shared-workspace acceptance', () => {
     const mobile = info.project.name.includes('mobile');
     if (mobile) await page.getByLabel('Open navigation', {exact:true}).click();
     const navigation = page.getByRole('navigation', {name: mobile ? 'Mobile navigation' : 'Main navigation', exact:true});
-    for (const name of ['Overview','Leads','Voice lab','Playbook','Calls','Connections']) {
+    for (const name of ['Overview','Leads','Lab','Calls','Connections']) {
       await expect(navigation.getByRole('link', {name,exact:true})).toBeVisible();
     }
     await navigation.getByRole('link', {name:'Connections',exact:true}).click();

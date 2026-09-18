@@ -67,15 +67,17 @@ with sync_playwright() as p:
     page.get_by_role('button',name='Import contacts',exact=True).click()
     page.get_by_text('1 added · 0 duplicates preserved · 1 row errors',exact=True).wait_for();checks.append('CSV partial success and row error feedback')
     page.get_by_role('button',name='Close dialog').click()
-    page.locator('.nav-item[href="#playbook"]').click()
+    page.locator('.nav-item[href="#lab"]').click()
+    page.get_by_role('heading', name='Teach both AIs in one place.').wait_for()
     page.locator('#pb-company').fill('Demo Workspace')
     page.locator('#pb-product').fill('A fictional demonstration product used only for a user-interface test. No real sales claims.')
-    page.get_by_role('button',name='Save playbook').click()
-    page.get_by_text('Playbook saved. Active calls keep their original playbook snapshot.',exact=True).wait_for()
-    assert page.locator('#pb-company').input_value()=='Demo Workspace';checks.append('Playbook save and round-trip values')
-    page.locator('.nav-item[href="#lab"]').click()
-    assert page.get_by_role('button',name='Start voice test').is_disabled();checks.append('Real voice disabled without server key')
-    page.get_by_role('button',name='Run scripted preview',exact=True).click()
+    page.get_by_role('button', name='Save playbook').click()
+    page.get_by_text('Playbook saved. Active calls keep their original playbook snapshot.', exact=True).wait_for()
+    assert page.locator('#pb-company').input_value()=='Demo Workspace';checks.append('Lab playbook save and round-trip values')
+    assert page.get_by_text('GPT-Live', exact=False).first.is_visible()
+    assert page.get_by_text('Grok 4.6', exact=False).first.is_visible()
+    assert page.get_by_role('button', name='Start voice test').is_disabled();checks.append('Real voice disabled without server key')
+    page.get_by_role('button', name='Run scripted preview', exact=True).click()
     page.get_by_text('A conversation, with a next step.',exact=True).wait_for()
     assert page.locator('#transcript .utterance').count()==9;checks.append('Scripted preview appears and remains labeled')
     page.evaluate("window.scrollTo(0,0);document.querySelector('#toast').classList.remove('visible')")
@@ -100,7 +102,7 @@ with sync_playwright() as p:
     page.locator('.nav-item[href="#overview"]').click();page.locator('.nav-item.active[href="#overview"]').wait_for();page.evaluate('window.scrollTo(0,0)');page.screenshot(path=str(OUT/'04-overview-with-preview-desktop.png'),full_page=True)
     # Check all views at a narrow phone viewport; horizontal tables may scroll within their own containers.
     page.set_viewport_size({'width':390,'height':844})
-    for tab in ['overview','leads','lab','playbook','calls','connections']:
+    for tab in ['overview','leads','lab','calls','connections']:
         if OFFLINE:
             page.evaluate('(tab)=>{location.hash=tab}',tab)
             page.locator('.nav-item.active[href="#'+tab+'"]').wait_for()

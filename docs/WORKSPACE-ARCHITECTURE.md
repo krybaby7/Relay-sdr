@@ -58,7 +58,7 @@ Authenticated SSE carries only audit cursors, not secrets or unrestricted transc
 
 See `.env.example` for every setting and README for local setup. Defaults: workspace disabled; explicit empty key/model; UTC presentation zone; 1 s polling; 3 s settle; 24,000-character chunks; four new chunks per run; 45 s provider timeout; 6,000 output tokens; 100 requests and 1,500,000 conservatively reserved tokens per UTC day. Reservations are not a monetary budget or exact token count. Input JSON is bounded at 160,000 bytes; response bytes at 512,000. Do not use live-provider credentials in tests.
 
-The worker calls the fixed OpenAI Responses endpoint with `store:false`, strict structured output and no execution tools. Provider policy still governs processing/retention. Reassessments may resend relevant prior real-call text and human notes. Layout planning uses bounded persisted assessments and current views rather than the full transcript database.
+The worker calls the fixed xAI Responses endpoint (`https://api.x.ai/v1/responses`) with `store:false`, strict structured output and no execution tools. Default model is Grok 4.6. Provider policy still governs processing/retention. Reassessments may resend relevant prior real-call text and human notes. Layout planning uses bounded persisted assessments and current views rather than the full transcript database.
 
 Back up **the entire data directory after a clean shutdown**, including the primary SQLite database, workspace checkpoint database, WAL files if present, and token. These files are sensitive and not encrypted by Relay. Do not share them with source archives. Additive versioned migrations preserve original IDs, phone identity, suppression, requests, outcomes and transcripts; an old six-table fixture and reruns are tested. Do not downgrade a migrated database in place; restore a protected pre-upgrade backup with the corresponding older code.
 
@@ -68,7 +68,7 @@ Actual integrations: React 19.2.3, json-render core/react 0.20.0, react-grid-lay
 
 Official API documentation was rechecked on 18 September 2026:
 - [GPT-Live guide](https://developers.openai.com/api/docs/guides/live) and [gpt-live-1 model](https://developers.openai.com/api/docs/models/gpt-live-1): separate voice and backend responsibilities; Live is not silently replaced with Realtime.
-- [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs): Responses `text.format`, strict JSON Schema, required fields and closed objects; incomplete/refused output needs explicit handling.
+- [xAI Grok 4.6](https://docs.x.ai/developers/grok-4-6) and [structured outputs](https://docs.x.ai/developers/model-capabilities/text/structured-outputs): workspace reasoning uses the xAI Responses API, not OpenAI Responses; no calling tools.
 - [LangGraph persistence](https://docs.langchain.com/oss/python/langgraph/persistence): thread checkpoints; installed SqliteSaver/StateGraph interfaces are exercised by restart tests.
 - [json-render source](https://github.com/vercel-labs/json-render) and [react-grid-layout source](https://github.com/react-grid-layout/react-grid-layout): installed package APIs/license files and production build checked; real rendering and gestures tested.
 

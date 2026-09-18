@@ -71,6 +71,9 @@ class DialInput(StrictModel):
 class VoiceInput(StrictModel):
     lead_id: str | None = None
 
+class BrowserTest(StrictModel):
+    allowed: bool
+
 class OutcomeArgs(StrictModel):
     outcome: Literal['qualified', 'not_interested', 'callback', 'wrong_number', 'unqualified']
     summary: str = Field(min_length=1, max_length=2000)
