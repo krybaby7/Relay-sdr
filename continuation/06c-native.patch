@@ -1,0 +1,349 @@
+diff --git a/.github/workflows/workspace-ci.yml b/.github/workflows/workspace-ci.yml
+index be1d262a25f89007615627698bf02561f0cbf4d5..dda37d7a4c7435fa7bd0c21d5aa23f2227b04741 100644
+--- a/.github/workflows/workspace-ci.yml
++++ b/.github/workflows/workspace-ci.yml
+@@ -4 +4,2 @@
+-    branches: [feat/ai-leads-workspace]
++    branches: [feat/ai-leads-workspace, feat/ai-leads-workspace-continue]
++    paths: ['app/**', 'frontend/**', 'tests/**', 'scripts/**', 'requirements*.txt', 'web/workspace/**', '.github/workflows/workspace-ci.yml']
+@@ -6,0 +8 @@
++  workflow_dispatch:
+@@ -15,0 +18 @@
++      WORKSPACE_API_KEY: ''
+@@ -28 +31 @@
+-      - name: Verify existing protections with patched dependencies
++      - name: Install the committed dependency resolution
+@@ -30 +32,0 @@
+-          set -o pipefail
+@@ -32,3 +34,7 @@
+-          python -m pip install fastapi==0.136.3 starlette==1.3.1 pytest==9.0.3 langgraph==1.2.11 langgraph-checkpoint-sqlite==3.1.1 ruff==0.16.8 pip-audit
+-          python -m pytest -q | tee baseline-test-results.txt
+-      - name: Package verified dependencies
++          python -m pip check
++          npm ci --prefix frontend
++          cd frontend
++          npx playwright install --with-deps chromium
++      - name: Verify native source and rendered desktop/mobile application
++        run: python scripts/verify_workspace.py --output /tmp/workspace-verification
++      - name: Confirm checked-in assets match source and recovery is unchanged
+@@ -36,15 +42,2 @@
+-          mkdir -p verification-inputs/wheels verification-inputs/frontend
+-          python -m pip download fastapi==0.136.3 starlette==1.3.1 pytest==9.0.3 langgraph==1.2.11 langgraph-checkpoint-sqlite==3.1.1 ruff==0.16.8 -d verification-inputs/wheels
+-          python -m pip freeze > verification-inputs/python-resolved.txt
+-          python -m pip_audit --format=json --output=verification-inputs/python-audit.json
+-          cd verification-inputs/frontend
+-          npm init -y
+-          npm pkg set 'overrides.esbuild=0.28.1'
+-          npm install --save-exact react@19.2.3 react-dom@19.2.3 @json-render/core@0.20.0 @json-render/react@0.20.0 react-grid-layout@2.2.4 zod@4.3.6
+-          npm install --save-dev --save-exact typescript@5.9.3 vite@7.3.6 @types/react@19.2.14 @types/react-dom@19.2.3 @types/node@22.16.0 eslint@9.39.2 typescript-eslint@8.55.0 @eslint/js@9.39.2 globals@17.3.0 @playwright/test@1.62.0
+-          npm ls --all --json > dependency-tree.json
+-          npm audit --json > audit.json
+-          tar -czf ../frontend-toolchain.tar.gz .
+-          cd ../..
+-          rm -rf verification-inputs/frontend
+-          cp baseline-test-results.txt verification-inputs/
++          git diff --exit-code -- web/workspace recovery/ai-leads-workspace-v2
++          test -z "$(git ls-files --others --exclude-standard web/workspace)"
+@@ -54,3 +47,5 @@
+-          name: relay-final-dependencies
+-          path: verification-inputs/
+-          retention-days: 3
++          name: native-workspace-verification
++          path: |
++            /tmp/workspace-verification/
++            frontend/test-results/
++          retention-days: 14
+diff --git a/frontend/package.json b/frontend/package.json
+index 3ffa9462bb9dfc2fcb46b4ccda4a9c4ece9172da..be357077db775170181d4cfce6c2f6173976f529 100644
+--- a/frontend/package.json
++++ b/frontend/package.json
+@@ -12 +12,2 @@
+-    "test:e2e": "playwright test"
++    "test:e2e": "playwright test",
++    "test:unit": "playwright test --config=playwright.unit.config.ts"
+@@ -34 +35,3 @@
+-  "overrides": { "esbuild": "0.28.1" }
++  "overrides": {
++    "esbuild": "0.28.1"
++  }
+diff --git a/frontend/tsconfig.json b/frontend/tsconfig.json
+index 6d6ab80b6260eb21d429a5a64a397abdc5eb4faa..ee1006a83e9fd5984bba93ffc240f9e8933925bf 100644
+--- a/frontend/tsconfig.json
++++ b/frontend/tsconfig.json
+@@ -1 +1,27 @@
+-{"compilerOptions":{"target":"ES2022","lib":["ES2022","DOM","DOM.Iterable"],"module":"ESNext","moduleResolution":"Bundler","jsx":"react-jsx","strict":true,"noEmit":true,"skipLibCheck":true,"allowImportingTsExtensions":true,"resolveJsonModule":true,"isolatedModules":true,"noUnusedLocals":true,"noUnusedParameters":true},"include":["src"]}
++{
++  "compilerOptions": {
++    "target": "ES2022",
++    "lib": [
++      "ES2022",
++      "DOM",
++      "DOM.Iterable"
++    ],
++    "module": "ESNext",
++    "moduleResolution": "Bundler",
++    "jsx": "react-jsx",
++    "strict": true,
++    "noEmit": true,
++    "skipLibCheck": true,
++    "allowImportingTsExtensions": true,
++    "resolveJsonModule": true,
++    "isolatedModules": true,
++    "noUnusedLocals": true,
++    "noUnusedParameters": true
++  },
++  "include": [
++    "src",
++    "e2e",
++    "unit",
++    "*.config.ts"
++  ]
++}
+diff --git a/frontend/playwright.unit.config.ts b/frontend/playwright.unit.config.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..7c94830314118143cdd2a19a321cea3e38c25534 100644
+--- /dev/null
++++ b/frontend/playwright.unit.config.ts
+@@ -0,0 +1,3 @@
++import { defineConfig } from '@playwright/test';
++// Pure TypeScript unit tests; no browser or application fixture is started.
++export default defineConfig({ testDir: './unit', workers: 1, retries: 0, reporter: 'list' });
+diff --git a/tests/test_workspace.py b/tests/test_workspace.py
+index 4d8d46d578db9b058310018691918f72fe830c4b..3a98230a25a46ebac4ffa5439cbe09fdac37e719 100644
+--- a/tests/test_workspace.py
++++ b/tests/test_workspace.py
+@@ -722,0 +723,58 @@
++
++
++@pytest.mark.parametrize('setting', ['model', 'prompt', 'schema'])
++def test_restart_version_change_supersedes_cached_work_not_its_provenance(ws, monkeypatch, setting):
++    import app.workspace.worker as module
++    store, _, model, new_worker = ws
++    lead, _ = add_real_fixture(store)
++    old = new_worker()
++    old.scan()
++    job = dict(store.conn.execute('SELECT * FROM ws_jobs').fetchone())
++    old.close()
++    options = {}
++    if setting == 'model':
++        options['workspace_model'] = 'mock-new-model'
++    elif setting == 'prompt':
++        monkeypatch.setattr(module, 'PROMPT_VERSION', 'test-new-prompt')
++    else:
++        monkeypatch.setattr(module, 'SCHEMA_VERSION', 'test-new-schema')
++    fresh = new_worker(**options)
++    run_all(fresh, store)
++    assert store.conn.execute('SELECT status FROM ws_jobs WHERE id=?', (job['id'],)).fetchone()[0] == 'superseded'
++    succeeded = dict(store.conn.execute("SELECT * FROM ws_jobs WHERE status='succeeded'").fetchone())
++    assert succeeded['model'] == fresh.config.workspace_model
++    assert succeeded['prompt_version'] == module.PROMPT_VERSION
++    assert succeeded['schema_version'] == module.SCHEMA_VERSION
++    assert assessment(store, lead['id'])['potential'] == 'strong'
++    assert len(model.requests) == 2  # stale work never contacted the mock provider
++
++
++def test_old_model_command_is_not_replayed_under_new_model(ws):
++    store, _, model, new_worker = ws
++    old = new_worker()
++    before = presentation.current(store)
++    queued = old.enqueue_command('Fictional command', 'all', before['version'])
++    old.close()
++    fresh = new_worker(workspace_model='mock-new-model')
++    assert fresh.tick()
++    assert store.conn.execute('SELECT status FROM ws_jobs WHERE id=?', (queued['id'],)).fetchone()[0] == 'superseded'
++    assert presentation.current(store) == before
++    assert model.requests == []
++
++
++def test_chunk_boundary_changes_cannot_reuse_wrong_source_slice(ws):
++    store, _, model, new_worker = ws
++    lead, _ = add_real_fixture(store, text=(TEXT + ' ') * 20)
++    first = new_worker(workspace_chunk_chars=1000, workspace_max_chunks=1)
++    assert first.tick()
++    assert len(model.requests) == 1
++    first.close()
++    second = new_worker(workspace_chunk_chars=2000, workspace_max_chunks=20)
++    run_all(second, store)
++    extractions = [payload for stage, payload in model.requests if stage == 'extract']
++    assert len(extractions) > 1
++    assert sum(len(source['text']) for source in extractions[1]['sources']) > 1000
++    data = assessment(store, lead['id'])
++    assert data['coverage']['all_chunks_processed']
++    assert data['coverage']['processed_characters'] == data['coverage']['total_characters']
++    assert store.all('outbox') == []
+diff --git a/tests/workspace_browser_server.py b/tests/workspace_browser_server.py
+index c2aa7814218235b16b6cb5971e2f083d3cb598db..62b2e1123d6fb766483e6c4bc4075d8fec288179 100644
+--- a/tests/workspace_browser_server.py
++++ b/tests/workspace_browser_server.py
+@@ -9,0 +10 @@
++import copy
+@@ -23,0 +25 @@
++from app.workspace.model import ModelUnavailable
+@@ -36,0 +39,20 @@
++            if 'unavailable' in command:
++                raise ModelUnavailable('Deterministic fixture: workspace provider is unavailable.')
++            if 'canvas' in command:
++                view = next(v for v in payload['workspace']['views'] if v['id'] == payload['current_view_id'])
++                layouts = copy.deepcopy(view['layouts'])
++                if 'adjust unpinned' in command:
++                    movable = next(key for key in view['widgets'] if not payload['workspace']['widgets'][key]['pinned'])
++                    for geometry in layouts.values():
++                        item = next(g for g in geometry if g['i'] == movable)
++                        item['y'] = max(g['y'] + g['h'] for g in geometry) + 2
++                else:
++                    order = [view['widgets'][-1], *view['widgets'][:-1]]
++                    for bp, geometry in layouts.items():
++                        cursor = 0
++                        for key in order:
++                            item = next(g for g in geometry if g['i'] == key)
++                            item.update(x=0, y=cursor, w={'lg': 12, 'md': 8, 'sm': 4}[bp])
++                            cursor += item['h'] + 2
++                return {'data': {'reason': 'Deterministic fixture: persisted geometry change, not live model quality.',
++                                 'operations': [{'op': 'set_layout', 'view_id': view['id'], 'layouts': layouts}]}, 'total_tokens': 10}
+diff --git a/requirements.txt b/requirements.txt
+index 52a0286c766472711efe64f91161312f2e919d8a..17d37fe6f33779abee64b3d35fddc77e42064aa9 100644
+--- a/requirements.txt
++++ b/requirements.txt
+@@ -0,0 +1 @@
++-c requirements-constraints.txt
+diff --git a/requirements-dev.txt b/requirements-dev.txt
+index 54ab35e39dff68a6ce5fcbb60953c9c6dcc26ab5..385aaf9f675683965e12a201638e3acb3a960b14 100644
+--- a/requirements-dev.txt
++++ b/requirements-dev.txt
+@@ -0,0 +1 @@
++-c requirements-constraints.txt
+diff --git a/requirements-constraints.txt b/requirements-constraints.txt
+new file mode 100644
+index 0000000000000000000000000000000000000000..16c7941bcaed5f4fc6abdeb058a68716e000e7bd 100644
+--- /dev/null
++++ b/requirements-constraints.txt
+@@ -0,0 +1,56 @@
++# Tested resolution on Python 3.13, 2026-09-18. Runtime installs use requirements.txt.
++# Additional platform-conditional dependencies may still be needed outside this tested environment.
++aiosqlite==0.22.1
++annotated-doc==0.0.5
++annotated-types==0.8.0
++anyio==4.15.1
++certifi==2026.7.22
++charset-normalizer==3.5.1
++click==8.5.0
++distro==1.9.0
++fastapi==0.136.3
++h11==0.16.0
++httpcore==1.0.9
++httpcore2==2.13.0
++httpx==0.28.1
++httpx2==2.13.0
++idna==3.20
++iniconfig==2.3.0
++jsonpatch==1.33
++jsonpointer==3.1.1
++langchain-core==1.6.3
++langchain-protocol==0.0.19
++langgraph==1.2.11
++langgraph-checkpoint==4.2.0
++langgraph-checkpoint-sqlite==3.1.1
++langgraph-prebuilt==1.1.0
++langgraph-sdk==0.4.4
++langsmith==0.12.6
++orjson==3.12.0
++ormsgpack==1.12.2
++packaging==26.3
++pluggy==1.6.0
++pydantic==2.13.4
++pydantic_core==2.46.4
++Pygments==2.21.0
++pytest==9.0.3
++pytest-asyncio==1.3.0
++python-dotenv==1.2.2
++PyYAML==6.0.3
++requests==2.34.2
++requests-toolbelt==1.0.0
++ruff==0.16.8
++sniffio==1.3.1
++sqlite-vec==0.1.9
++starlette==1.3.1
++tenacity==9.1.4
++truststore==0.10.4
++typing-inspection==0.4.4
++typing_extensions==4.16.0
++tzdata==2026.2
++urllib3==2.8.0
++uuid_utils==0.17.1
++uvicorn==0.48.0
++websockets==16.0
++xxhash==4.0.1
++zstandard==0.25.0
+diff --git a/scripts/verify_workspace.py b/scripts/verify_workspace.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..696cef881122c26491eef74749859de349be2143 100644
+--- /dev/null
++++ b/scripts/verify_workspace.py
+@@ -0,0 +1,67 @@
++"""Run native deterministic verification. Installs/deployment/calling are not performed."""
++from __future__ import annotations
++import argparse
++import hashlib
++import json
++import os
++from pathlib import Path
++import shutil
++import subprocess
++import sys
++import time
++
++ROOT = Path(__file__).resolve().parents[1]
++
++def main() -> int:
++    parser = argparse.ArgumentParser(description=__doc__)
++    parser.add_argument('--output', type=Path, default=ROOT / 'verification/local')
++    args = parser.parse_args()
++    out = args.output.resolve()
++    out.mkdir(parents=True, exist_ok=True)
++    npm = shutil.which('npm')
++    if not npm:
++        parser.error('npm is required; install the documented Node toolchain first.')
++    env = dict(os.environ, ENABLE_OUTBOUND='false', OPENAI_API_KEY='', WORKSPACE_API_KEY='',
++               TWILIO_AUTH_TOKEN='', LANGSMITH_TRACING='false', RELAY_TEST_PYTHON=sys.executable)
++    source = subprocess.check_output(['git','rev-parse','HEAD'], cwd=ROOT, text=True).strip()
++    status = subprocess.check_output(['git','status','--porcelain'], cwd=ROOT, text=True)
++    # Fingerprint the code/test/build configuration actually executed, including
++    # uncommitted development changes; never read runtime data or credentials.
++    paths = subprocess.check_output(['git','ls-files','--cached','--others','--exclude-standard'], cwd=ROOT, text=True).splitlines()
++    hashes = {}
++    for name in sorted(set(paths)):
++        p = ROOT / name
++        if p.is_file() and (name.startswith(('app/','frontend/src/','frontend/e2e/','frontend/unit/','tests/','scripts/')) or
++                            name.startswith('requirements') or (name.startswith('frontend/') and p.suffix in ('.json','.ts'))):
++            hashes[name] = hashlib.sha256(p.read_bytes()).hexdigest()
++    checks = [('integrity', [sys.executable,'recovery/ai-leads-workspace-v2/verify_github_checkpoint.py'], ROOT),
++              ('backend', [sys.executable,'-m','pytest','tests','-q'], ROOT),
++              *[(name, [npm,'run',script], ROOT/'frontend') for name,script in
++                [('typecheck','typecheck'),('lint','lint'),('unit','test:unit'),('build','build'),('browser','test:e2e')]]]
++    report = {'source_commit':source, 'initial_worktree_status':status, 'source_sha256':hashes,
++              'scope':'Mocked providers and fictional loopback fixtures only. No live provider verification.',
++              'checks':[], 'all_executed_checks_passed':False}
++    for name,command,cwd in checks:
++        start = time.monotonic()
++        print(f'Running {name}: {command}', flush=True)
++        with (out/f'{name}.txt').open('w') as log:
++            try:
++                done = subprocess.run(command, cwd=cwd, env=env, stdout=log, stderr=subprocess.STDOUT, timeout=900)
++                code = done.returncode
++            except subprocess.TimeoutExpired:
++                log.write('\nVerification stage exceeded 900 seconds; not reported as passing.\n')
++                code = 124
++        report['checks'].append({'name':name,'command':command,'cwd':str(cwd.relative_to(ROOT)) or '.',
++                                 'exit_code':code,'seconds':round(time.monotonic()-start,2)})
++        (out/'RESULTS.json').write_text(json.dumps(report,indent=2)+'\n')
++        print((out/f'{name}.txt').read_text(), flush=True)
++        if code:
++            print(f'Stopped at {name}; later stages were not executed.', file=sys.stderr)
++            return code
++    report['all_executed_checks_passed'] = True
++    (out/'RESULTS.json').write_text(json.dumps(report,indent=2)+'\n')
++    print(f'All executed checks passed. Results: {out}')
++    return 0
++
++if __name__ == '__main__':
++    raise SystemExit(main())
