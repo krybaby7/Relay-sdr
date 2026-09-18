@@ -1,0 +1,91 @@
+name: Native acceptance milestone
+on:
+  push:
+    branches: [feat/ai-leads-workspace-continue]
+    paths: ['.github/workflows/workspace-acceptance-milestone.yml']
+permissions:
+  contents: write
+jobs:
+  publish-and-verify:
+    if: github.ref == 'refs/heads/feat/ai-leads-workspace-continue'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      ENABLE_OUTBOUND: 'false'
+      OPENAI_API_KEY: ''
+      WORKSPACE_API_KEY: ''
+      TWILIO_AUTH_TOKEN: ''
+      LANGSMITH_TRACING: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/ai-leads-workspace-continue
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Publish only the hash-checked incremental native source change
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python - <<'PY'
+          import pathlib, subprocess
+          expected = {
+            'CONTINUATION.md': ('0b23aa1', '978231a'),
+            'app/main.py': ('caf7001', '30b03ae'),
+            'app/workspace/routes.py': ('d5a4576', '91a144f'),
+            'frontend/e2e/fixtures.ts': (None, 'f982154'),
+            'frontend/e2e/workspace.spec.ts': ('b6ebaa9', '032cf33'),
+            'frontend/playwright.config.ts': ('ada605f', '797022e'),
+            'frontend/src/App.tsx': ('6e15f3a', 'aed955e'),
+            'frontend/src/api.ts': ('73dcb41', 'eba936e'),
+            'tests/test_workspace_http.py': (None, '182dc22'),
+            'tests/workspace_browser_server.py': ('345c5d9', 'c2aa781'),
+          }
+          def check(after=False):
+            for name, pair in expected.items():
+              want = pair[int(after)]
+              if want is None:
+                assert not pathlib.Path(name).exists(), name
+              else:
+                got = subprocess.check_output(['git','hash-object',name],text=True).strip()
+                assert got.startswith(want), (name, got, want)
+          check()
+          subprocess.run(['git','apply','--check','--index','--unidiff-zero','continuation/04-native-browser-fixes.patch'],check=True)
+          subprocess.run(['git','apply','--index','--unidiff-zero','continuation/04-native-browser-fixes.patch'],check=True)
+          check(True)
+          PY
+          git rm continuation/04-native-browser-fixes.patch
+          npm ci --prefix frontend
+          npm run build --prefix frontend
+          git add web/workspace
+          git config user.name 'Relay workspace implementation'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'fix: stable accessible workspace controls, bounded snapshot reads and isolated browser tests'
+          git push origin HEAD:refs/heads/feat/ai-leads-workspace-continue
+      - name: Verify native implementation without any restoration
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/native-acceptance
+          git rev-parse HEAD > /tmp/native-acceptance/SOURCE-COMMIT
+          python recovery/ai-leads-workspace-v2/verify_github_checkpoint.py | tee /tmp/native-acceptance/integrity.json
+          python -m pip install -r requirements-dev.txt
+          python -m pytest tests -q | tee /tmp/native-acceptance/backend.txt
+          cd frontend
+          npm run typecheck | tee /tmp/native-acceptance/typecheck.txt
+          npm run lint | tee /tmp/native-acceptance/lint.txt
+          npx playwright install --with-deps chromium
+          npm run test:e2e | tee /tmp/native-acceptance/browser.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-acceptance-milestone
+          path: |
+            /tmp/native-acceptance/
+            frontend/test-results/
+          retention-days: 7
