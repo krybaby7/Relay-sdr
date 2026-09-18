@@ -14,7 +14,7 @@ from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError
 from .config import Config
 from .db import Store, now_iso
-from .models import LeadInput, Playbook, DialInput, VoiceInput
+from .models import LeadInput, Playbook, DialInput, VoiceInput, BrowserTest
 from .policy import ACTIVE, TERMINAL, dial_blockers
 from .telephony import Twilio, validate_signature
 from .live import run_bridge
@@ -206,7 +206,11 @@ def create_app(config: Config | None = None, *, provider=None, workspace_model=N
             connectors=c.connectors(), outbox=store.all('outbox'),
             config={'outbound_enabled': c.enable_outbound, 'max_seconds': c.max_seconds, 'max_daily': c.max_daily,
                     'max_concurrent': c.max_concurrent, 'live_model': c.live_model, 'backend_model': c.backend_model,
-                    'allowlist_count': len(c.allowed_numbers)})
+                    'allowlist_count': len(c.allowed_numbers)},
+            lab={'live': {'key_configured': bool(c.openai_key), 'live_model': c.live_model,
+                          'backend_model': c.backend_model,
+                          'browser_test_allowed': store.get_setting('lab_browser_test_allowed') is not False},
+                 'orchestrator': workspace.settings(), 'rubric': store.get_setting('ws_rubric')})
 
     @app.post('/api/leads', dependencies=[Depends(admin)])
     async def add_lead(data: LeadInput):
@@ -268,6 +272,11 @@ def create_app(config: Config | None = None, *, provider=None, workspace_model=N
     @app.put('/api/playbook', dependencies=[Depends(admin)])
     async def playbook(data: Playbook):
         store.setting('playbook', data.model_dump()); return data.model_dump()
+
+    @app.post('/api/lab/browser-test', dependencies=[Depends(admin)])
+    async def browser_test(data: BrowserTest):
+        store.setting('lab_browser_test_allowed', data.allowed)
+        return {'browser_test_allowed': data.allowed}
 
     @app.get('/api/leads/{id}/preflight', dependencies=[Depends(admin)])
     async def preflight(id: str):
@@ -337,6 +346,8 @@ def create_app(config: Config | None = None, *, provider=None, workspace_model=N
     @app.post('/api/voice/ticket', dependencies=[Depends(admin)])
     async def voice_ticket(data: VoiceInput):
         if not c.openai_key: raise HTTPException(409, 'Set OPENAI_API_KEY on the server first.')
+        if store.get_setting('lab_browser_test_allowed') is False:
+            raise HTTPException(409, 'Browser voice tests are turned off in Lab.')
         if data.lead_id: get('leads', data.lead_id)
         if sum(x['status'] in ACTIVE for x in store.all('calls')) >= c.max_concurrent:
             raise HTTPException(409, 'The concurrent-session limit has been reached.')

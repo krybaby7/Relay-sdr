@@ -14,10 +14,10 @@ The source is runnable. No API keys, provider accounts, lead lists, customer dat
 | --- | --- |
 | Workspace | Persistent shared AI/manual views, responsive draggable canvas, keyboard alternatives, pins/locks, proposals, history, undo/reset, private token login, real backend aggregates |
 | Lead intelligence | Evidence-linked cumulative assessments; potential, priority, coverage and eligibility kept separate; confirmed human corrections; internal commitments; paginated call/source/history details; typed custom fields |
-| Background reasoning | Separate optional Responses model, durable SQLite jobs and LangGraph checkpoints, bounded retries/chunks/budgets, stale-write rejection, explicit gaps, no outbound tools |
+| Background reasoning | Separate optional Grok 4.6 (xAI) workspace model, durable SQLite jobs and LangGraph checkpoints, bounded retries/chunks/budgets, stale-write rejection, explicit gaps, no outbound tools |
 | Leads | Manual add/edit, validated E.164 numbers, timezone, consent evidence, CSV import with per-row errors, deduplication by number, irreversible do-not-call entries in the app |
-| Playbook | Company/product/facts, qualification questions, next-step goal, voice/language/tone, allowed calling days and hours, operator approval |
-| Voice lab | No-key text-only scripted preview, plus browser microphone/PCM bridge to GPT-Live when a server API key is supplied |
+| Playbook | Company/product/facts, qualification questions, next-step goal, voice/language/tone, allowed calling days and hours, operator approval — edited in Lab |
+| Lab | One operator page: GPT-Live config, Grok 4.6 orchestrator (pause/rubric), shared instructions, no-key scripted preview, and mic test once the Live key is on the server |
 | Phone connector | Twilio call creation, signed TwiML and callbacks, call-bound Media Stream token, PCMU audio passthrough to GPT-Live |
 | Sales tools | Save outcome; save a meeting request; save a human-callback request; opt out; end conversation |
 | Review | Transcript fragments, summaries, request-only labels, usage-finalization state, JSON export, manual call stop and provider-state check |
@@ -55,7 +55,7 @@ Open the local address printed in the terminal, normally `http://localhost:8080`
 
 If port 8080 is occupied, change `PORT` in `.env`. Restart after configuration changes. Start from the project directory so `.env` and the default `.data` path resolve consistently.
 
-First try **Voice lab → Run scripted preview**. It makes no model request, microphone request, or telephone call. Fictional sample contacts are optional and are explicitly blocked from live dialing.
+First try **Lab → Run scripted preview**. It makes no model request, microphone request, or telephone call. Fictional sample contacts are optional and are explicitly blocked from live dialing.
 
 The backend must remain running. Closing the browser does not shut down the server. This package is not a deployed web service, hosted demo, mobile APK, or desktop installer.
 
@@ -67,13 +67,13 @@ To enable only internal workspace reasoning, edit your private `.env`:
 
 ```dotenv
 WORKSPACE_ENABLED=true
-WORKSPACE_API_KEY=your_separate_server_side_key
-WORKSPACE_MODEL=your_project_model_with_strict_structured_outputs
+WORKSPACE_API_KEY=your_separate_xai_key
+WORKSPACE_MODEL=grok-4.6
 WORKSPACE_TIMEZONE=UTC
 ENABLE_OUTBOUND=false
 ```
 
-`WORKSPACE_MODEL` above is a placeholder, not a model identifier. Choose a Responses model available in your project with strict Structured Outputs support. There is no silent model/key substitution. Restart the server. Approve accurate product facts in Playbook and review the workspace qualification rubric before treating assessments as qualified. Enabling reasoning sends relevant stored real-call text and human notes to OpenAI; it does not enable dialing, messaging, recording or webhook approval.
+`WORKSPACE_MODEL` should be `grok-4.6` (xAI Responses API). There is no silent model/key substitution and no fallback to `OPENAI_API_KEY`. Restart the server. Approve accurate product facts and the sales rubric in **Lab** before treating assessments as qualified. Enabling reasoning sends relevant stored real-call text and human notes to xAI; it does not enable dialing, messaging, recording or webhook approval. The orchestrator has no calling tools.
 
 **Manual** keeps presentation changes as proposals. **Suggest** previews each agent presentation change. **Adaptive** applies small, validated, reversible changes, but larger/structural changes require approval unless the operator explicitly allows small structural changes. Pins and locks remain protected. Pause reasoning in agent settings to stop new processing; an already executing request may finish. The server must stay running for background processing.
 
@@ -116,7 +116,7 @@ BACKEND_MODEL=gpt-5.6-terra
 ENABLE_OUTBOUND=false
 ```
 
-Restart. Edit the playbook, open the voice lab, then click **Start voice test**. Grant microphone access only to your own local/HTTPS workspace. Headphones are useful for your first audio check.
+Restart. Edit Lab (voice, language, tone, and whether a browser test is allowed), then click **Start voice test**. Grant microphone access only to your own local/HTTPS workspace. Headphones are useful for your first audio check.
 
 The configured account needs access to both the Live voice model and its Responses backend. Model names are configurable. Account access, exact pricing, audio quality, interruptions, and speech/tool behavior have **not** been tested against a live account in this build.
 

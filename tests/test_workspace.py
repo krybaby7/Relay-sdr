@@ -636,7 +636,7 @@ def test_provider_failure_and_refusal_are_not_partial_writes(ws, status, result,
     captured = []
     def handler(request):
         captured.append(json.loads(request.content))
-        assert str(request.url) == 'https://api.openai.com/v1/responses'
+        assert str(request.url) == 'https://api.x.ai/v1/responses'
         return httpx.Response(status, json=result)
     model = ResponsesModel(replace(config, workspace_key='mock-key'), transport=httpx.MockTransport(handler))
     with pytest.raises(exception):

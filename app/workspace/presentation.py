@@ -35,6 +35,8 @@ def initialize(store):
                                                      'and access to the decision maker. Not a closing probability.'})
         if store.get_setting('ws_paused') is None:
             store.setting('ws_paused', False)
+        if store.get_setting('lab_browser_test_allowed') is None:
+            store.setting('lab_browser_test_allowed', True)
 
 
 def current(store):

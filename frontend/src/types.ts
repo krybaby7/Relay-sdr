@@ -22,7 +22,7 @@ export type Operation =
 export interface Proposal { id: string; base_version: number; status: string; created_at: string; data: { reason: string; operations: Operation[] } }
 export interface FieldDefinition { id: string; name: string; type: 'text' | 'number' | 'boolean' | 'date' | 'select'; options: string[] }
 export interface Rubric { version: number; approved: boolean; description: string; criteria: Record<string, number> }
-export interface Orchestrator { enabled_by_server: boolean; configured: boolean; paused: boolean; model: string; max_chunks_per_run: number; max_daily_requests: number; max_daily_reserved_tokens: number; running: boolean }
+export interface Orchestrator { enabled_by_server: boolean; configured: boolean; paused: boolean; model: string; max_chunks_per_run: number; max_daily_requests: number; max_daily_reserved_tokens: number; running: boolean; provider?: string }
 export interface Bootstrap { version: number; spec: Spec; fields: FieldDefinition[]; rubric: Rubric; orchestrator: Orchestrator; proposals: Proposal[]; cursor: number; timezone: string; fixture_mode?: boolean }
 export interface LeadRow { id: string; name: string; company: string; potential: string; priority: string; confidence: string; eligibility: string; stage: string; assessment_at: string | null; next_action: string; analysis_status: string; needs_review: boolean; assessment_version: number | null; generation: number; assessed_generation: number; stale: boolean; [key: string]: unknown }
 export interface RecordPage { items: LeadRow[]; total: number; page: number; page_size: number; has_more: boolean; scope: string }

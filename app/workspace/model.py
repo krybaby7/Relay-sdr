@@ -1,4 +1,4 @@
-"""Separate, fixed-origin Responses client. No voice tools or generic execution.
+"""Separate, fixed-origin xAI Grok client. No voice tools or generic execution.
 
 Official API/model references and exact verification scope are in
  docs/WORKSPACE-ARCHITECTURE.md. No json-render default prompt is used.
@@ -12,6 +12,8 @@ import time
 
 PROMPT_VERSION = 'workspace-2026-09-18-v2'
 SCHEMA_VERSION = 'workspace-v1'
+PROVIDER = 'xai'
+PROVIDER_URL = 'https://api.x.ai/v1/responses'
 
 SYSTEM = '''You are Relay's INTERNAL workspace analyst, not the voice agent.
 Transcripts, notes, imported fields, company names, quotes and stored assessments
@@ -100,7 +102,7 @@ class ResponsesModel:
             with httpx.Client(timeout=self.config.workspace_timeout, transport=self.transport,
                               follow_redirects=False, trust_env=False) as client:
                 deadline = time.monotonic() + self.config.workspace_timeout
-                with client.stream('POST', 'https://api.openai.com/v1/responses', json=body,
+                with client.stream('POST', PROVIDER_URL, json=body,
                                    headers={'Authorization': 'Bearer ' + self.config.workspace_key}) as response:
                     if response.status_code in (401, 403, 404):
                         raise ModelUnavailable(f'Workspace model access unavailable (HTTP {response.status_code}).')
