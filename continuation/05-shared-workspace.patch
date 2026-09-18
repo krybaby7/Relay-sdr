@@ -1,0 +1,198 @@
+diff --git a/CONTINUATION.md b/CONTINUATION.md
+index 978231a..caf775a 100644
+--- a/CONTINUATION.md
++++ b/CONTINUATION.md
+@@ -90,0 +91,28 @@ and unmerged pull request. This milestone is not a completed release claim.
++
++## Shared-workspace acceptance continuation — 2026-09-18
++
++Inspected newer remote head `1bf36a7aab36cc72b32ff6ab19ee2217fc2984a1` rather
++than resetting the supplied `37d5c3a` anchor. Source/toolchain verification commit
++`ab71d202e3bc245a7b4d85c5717f45eabf9e2f23` ran in Actions 35320940023.
++Local baseline: recovery integrity passed; `python -m pytest tests -q`: 164
++passed, one upstream AnyIO warning (15.36s); frontend typecheck/lint/build passed;
++eight desktop/mobile Chromium tests passed, zero retries/skips (1.4m).
++
++Native UI changes at this milestone: recoverable initial-load errors; keyboard
++panel reordering with collision resolution and immutable pins; board pagination;
++preserved local queries when pinning/configuring; immediate invalidation of
++selected evidence across saved-view/practice switches; independent widget-read
++retry and refresh after task edits; paginated workspace history; detail emphasis
++retained when creating a view. Typecheck and lint passed after these changes.
++Broader browser tests are being added; these new interactions are not yet claimed
++verified. All data/providers are fictional/mocked; no live provider verification.
++
++Publication uses an ordinary guarded incremental source patch because git network
++access is unavailable in the editing container. The publisher verifies base and
++result blobs and removes its one-time input after applying it to native files.
++It never executes the older restoration patches or workflows. Recovery, main,
++calling, provider destinations and recording settings remain unchanged.
++
++Next: complete AI geometry/manual pin/lock/reload flows, board/column/history and
++error-recovery coverage; security/resilience audit, full rerun, setup/architecture/
++license documentation, actual screenshots and an unmerged pull request.
+diff --git a/frontend/src/App.tsx b/frontend/src/App.tsx
+index aed955e..737a2e4 100644
+--- a/frontend/src/App.tsx
++++ b/frontend/src/App.tsx
+@@ -10,0 +11 @@ import { CallViewer, LeadDetail, NoteViewer } from './details';
++import { changeGeometry } from './geometry';
+@@ -43 +44 @@ export default function App() {
+-  const [command, setCommand] = useState(''); const [activeJob, setActiveJob] = useState<Job | null>(null); const [jobs, setJobs] = useState<Job[]>([]); const [revisions, setRevisions] = useState<Revision[]>([]);
++  const [command, setCommand] = useState(''); const [activeJob, setActiveJob] = useState<Job | null>(null); const [jobs, setJobs] = useState<Job[]>([]); const [revisions, setRevisions] = useState<Revision[]>([]); const [historyMore, setHistoryMore] = useState(false);
+@@ -46 +47 @@ export default function App() {
+-  const bootstrapLoading = useRef(false);
++  const bootstrapLoading = useRef(false); const sessionEpoch = useRef(0);
+@@ -54 +55 @@ export default function App() {
+-    bootstrapLoading.current = true;
++    bootstrapLoading.current = true; const epoch = sessionEpoch.current; setError('');
+@@ -56,0 +58 @@ export default function App() {
++      if (epoch !== sessionEpoch.current) return;
+@@ -63,0 +66 @@ export default function App() {
++      if (epoch !== sessionEpoch.current) return;
+@@ -66 +69 @@ export default function App() {
+-    } finally { bootstrapLoading.current = false; }
++    } finally { if (epoch === sessionEpoch.current) bootstrapLoading.current = false; }
+@@ -108,0 +112,2 @@ export default function App() {
++    const oldView = bootRef.current.spec.views.find(v => v.id === viewId);
++    const preserveQuery = oldView && queryRef.current && JSON.stringify(queryRef.current) !== JSON.stringify(oldView.query) && !ops.some(op => op.op === 'edit_view' && op.view_id === viewId && 'query' in op);
+@@ -112 +117 @@ export default function App() {
+-    else { const freshView = result.spec.views.find(v => v.id === viewId); if (freshView) setQuery(freshView.query); }
++    else { const freshView = result.spec.views.find(v => v.id === viewId); if (freshView && !preserveQuery) setQuery(freshView.query); }
+@@ -118,0 +124,2 @@ export default function App() {
++    // Selected evidence belongs to the old view, especially across real/practice.
++    detailRequest.current++; setDetail(null); setDetailOpen(false); setCall(null); setNoteSource(null);
+@@ -135,10 +142,6 @@ export default function App() {
+-    if (!view) return; const next = structuredClone(layoutDraft || view.layouts); const item = next[breakpoint].find(g => g.i === id)!;
+-    if (change === 'up') item.y = Math.max(0, item.y - 2); if (change === 'down') item.y = Math.min(490, item.y + 2);
+-    if (change === 'wider') item.w = Math.min(COLS[breakpoint] - item.x, item.w + 1); if (change === 'narrower') item.w = Math.max(4, item.w - 1);
+-    if (change === 'taller') item.h = Math.min(30, item.h + 1); if (change === 'shorter') item.h = Math.max(4, item.h - 1);
+-    // Push unlocked lower panels down; never displace a pinned one.
+-    const ordered = [...next[breakpoint]].sort((a, b) => a.y - b.y);
+-    for (let n = 0; n < ordered.length; n++) for (let prior = 0; prior < n; prior++) { const a = ordered[prior], b = ordered[n];
+-      if (!boot!.spec.widgets[b.i].pinned && a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y) b.y = a.y + a.h;
+-    }
+-    setLayoutDraft(next);
++    if (!view || view.locked) return;
++    try {
++      const next = structuredClone(layoutDraft || view.layouts);
++      next[breakpoint] = changeGeometry(next[breakpoint], id, change, new Set(Object.values(boot!.spec.widgets).filter(w => w.pinned).map(w => w.id)), COLS[breakpoint]);
++      setLayoutDraft(next); setError('');
++    } catch (e) { setError((e as Error).message); }
+@@ -145,0 +149 @@ export default function App() {
++
+@@ -151 +155 @@ export default function App() {
+-  async function showHistory() { const result = await api<{ items: Revision[] }>('/api/workspace/revisions'); setRevisions(result.items); setDialog('history'); }
++  async function showHistory(before?: number) { const result = await readApi<{ items: Revision[]; has_more: boolean }>(`/api/workspace/revisions${before ? `?before=${before}` : ''}`); setRevisions(previous => before ? [...previous, ...result.items] : result.items); setHistoryMore(result.has_more); setDialog('history'); }
+@@ -154,0 +159,5 @@ export default function App() {
++  function lockWorkspace() {
++    sessionEpoch.current++; detailRequest.current++; bootstrapLoading.current = false;
++    sessionStorage.removeItem('relay-token'); setAuthenticated(false); setBoot(null); setData(null); setDetail(null); setDetailOpen(false); setCall(null); setNoteSource(null); setDialog(null); setActiveJob(null); setSelected(new Set()); setQuery(null); setLayoutDraft(null); setToken(''); setError(''); setEditCanvas(false); setPending(false);
++  }
++
+@@ -156 +165 @@ export default function App() {
+-  if (!boot || !view || !query) return <main className="loading-page"><span className="spinner"/><h2>Opening your saved workspace…</h2>{error && <p className="error" role="alert">{error}</p>}</main>;
++  if (!boot || !view || !query) return <main className="loading-page">{!error && <span className="spinner"/>}<h2>{error ? 'Your workspace could not be loaded' : 'Opening your saved workspace…'}</h2>{error && <><p className="error" role="alert">{error}</p><p>Your saved records and layout have not changed.</p><button onClick={() => action(loadBootstrap(true))}>Retry opening workspace</button></>}<button onClick={lockWorkspace}>Back to sign in</button></main>;
+@@ -159 +168 @@ export default function App() {
+-  const context = data ? { viewId: view.id, bootstrap: boot, data, detail, query, selected, toggleSelection: (id: string) => setSelected(previous => { const next = new Set(previous); if (next.has(id)) next.delete(id); else next.add(id); return next; }),
++  const context = data ? { viewId: view.id, bootstrap: boot, data, dataVersion: refreshCounter, detail, query, selected, toggleSelection: (id: string) => setSelected(previous => { const next = new Set(previous); if (next.has(id)) next.delete(id); else next.add(id); return next; }),
+@@ -163 +172 @@ export default function App() {
+-    <aside className="sidebar"><a className="brand" href="/#overview"><span className="brand-symbol">r</span><span>relay <small>SDR</small></span></a><span className="nav-caption">WORKSPACE</span><nav aria-label="Main navigation">{[['grid','Overview','/#overview'],['people','Leads','/leads'],['phone','Voice lab','/#lab'],['book','Playbook','/#playbook'],['clock','Calls','/#calls'],['link','Connections','/#connections']].map(([icon,name,href]) => <a key={name} href={href} className={name === 'Leads' ? 'nav-item active' : 'nav-item'} title={name}><Icon name={icon}/><span>{name}</span>{name === 'Leads' && <span className="nav-dot"/>}</a>)}</nav><div className="sidebar-bottom"><div className="workspace-avatar">R</div><div><strong>Private workspace</strong><small>Local · single operator</small></div><button className="icon-button" aria-label="Lock workspace" onClick={() => { sessionStorage.removeItem('relay-token'); setAuthenticated(false); setBoot(null); setData(null); setDetail(null); setDetailOpen(false); setCall(null); setNoteSource(null); setDialog(null); setActiveJob(null); setSelected(new Set()); setQuery(null); setLayoutDraft(null); setToken(''); }}><Icon name="lock" size={16}/></button></div></aside>
++    <aside className="sidebar"><a className="brand" href="/#overview"><span className="brand-symbol">r</span><span>relay <small>SDR</small></span></a><span className="nav-caption">WORKSPACE</span><nav aria-label="Main navigation">{[['grid','Overview','/#overview'],['people','Leads','/leads'],['phone','Voice lab','/#lab'],['book','Playbook','/#playbook'],['clock','Calls','/#calls'],['link','Connections','/#connections']].map(([icon,name,href]) => <a key={name} href={href} className={name === 'Leads' ? 'nav-item active' : 'nav-item'} title={name}><Icon name={icon}/><span>{name}</span>{name === 'Leads' && <span className="nav-dot"/>}</a>)}</nav><div className="sidebar-bottom"><div className="workspace-avatar">R</div><div><strong>Private workspace</strong><small>Local · single operator</small></div><button className="icon-button" aria-label="Lock workspace" onClick={lockWorkspace}><Icon name="lock" size={16}/></button></div></aside>
+@@ -212 +221 @@ export default function App() {
+-    {dialog === 'history' && <Modal title="Workspace history & restore" close={() => setDialog(null)} wide><p>Restore changes presentation only. It never deletes lead records, transcripts, assessments or tasks.</p><div className="modal-actions"><button disabled={boot.version <= 1} onClick={() => action(restore(boot.version - 1))}>Undo last workspace change</button><button onClick={() => { if (window.confirm('Reset the layout to defaults? All lead records and evidence are retained.')) action(restore()); }}>Reset layout</button></div>{revisions.map(revision => <div className="revision" key={revision.version}><div><strong>Version {revision.version} · {label(revision.actor)}</strong><p>{revision.reason}</p><small>{date(revision.created_at, boot.timezone)}</small></div><button disabled={revision.version === boot.version} onClick={() => action(restore(revision.version))}>Restore</button></div>)}</Modal>}
++    {dialog === 'history' && <Modal title="Workspace history & restore" close={() => setDialog(null)} wide><p>Restore changes presentation only. It never deletes lead records, transcripts, assessments or tasks.</p><div className="modal-actions"><button disabled={boot.version <= 1} onClick={() => action(restore(boot.version - 1))}>Undo last workspace change</button><button onClick={() => { if (window.confirm('Reset the layout to defaults? All lead records and evidence are retained.')) action(restore()); }}>Reset layout</button></div>{revisions.map(revision => <div className="revision" key={revision.version}><div><strong>Version {revision.version} · {label(revision.actor)}</strong><p>{revision.reason}</p><small>{date(revision.created_at, boot.timezone)}</small></div><button disabled={revision.version === boot.version} onClick={() => action(restore(revision.version))}>Restore</button></div>)}{historyMore && <button onClick={() => action(showHistory(revisions.at(-1)?.version))}>Load older workspace versions</button>}</Modal>}
+diff --git a/frontend/src/catalog.tsx b/frontend/src/catalog.tsx
+index eb1fadc..dae151a 100644
+--- a/frontend/src/catalog.tsx
++++ b/frontend/src/catalog.tsx
+@@ -8 +8 @@ import { Badge, Empty, Icon } from './ui';
+-import { api, date, label } from './api';
++import { readApi, date, label } from './api';
+@@ -20 +20 @@ interface Context {
+-  viewId: string; bootstrap: Bootstrap; data: Dataset; detail: Detail | null; query: Query;
++  viewId: string; bootstrap: Bootstrap; data: Dataset; dataVersion: number; detail: Detail | null; query: Query;
+@@ -45 +45,5 @@ function LeadsTable({ widgetId }: { widgetId: string }) {
+-    <div className="pager"><span>{(ctx.data.records.page - 1) * ctx.data.records.page_size + 1}–{Math.min(ctx.data.records.page * ctx.data.records.page_size, ctx.data.records.total)} of {ctx.data.records.total}</span><div><button disabled={ctx.data.records.page === 1} onClick={() => ctx.page(ctx.data.records.page - 1)}>Previous</button><button disabled={!ctx.data.records.has_more} onClick={() => ctx.page(ctx.data.records.page + 1)}>Next</button></div></div></>;
++    <DirectoryPages/></>;
++}
++function DirectoryPages() {
++  const ctx = useWorkspace(); const records = ctx.data.records;
++  return <div className="pager" aria-label="Lead directory pages"><span>{records.total ? (records.page - 1) * records.page_size + 1 : 0}–{Math.min(records.page * records.page_size, records.total)} of {records.total}</span><div><button disabled={records.page === 1} onClick={() => ctx.page(records.page - 1)}>Previous</button><button disabled={!records.has_more} onClick={() => ctx.page(records.page + 1)}>Next</button></div></div>;
+@@ -60 +64 @@ function PipelineBoard({ widgetId }: { widgetId: string }) {
+-  return <><div className="board">{stages.map(stage => <section className="board-column" key={stage}><h3>{label(stage)}<span>{ctx.data.metrics.stages.find(s => s.stage === stage)?.count || 0}</span></h3>{ctx.data.records.items.filter(row => row.stage === stage).map(row => <button className="board-card" key={row.id} onClick={() => ctx.openLead(row.id)}><strong>{row.name}</strong><small>{row.company}</small><Badge value={row.potential}/><span>{label(row.priority)}</span></button>)}</section>)}</div><p className="widget-footnote">Stage counts cover this view. Cards show the current directory page; open a card to inspect its evidence.</p></>;
++  return <><div className="board">{stages.map(stage => <section className="board-column" key={stage}><h3>{label(stage)}<span>{ctx.data.metrics.stages.find(s => s.stage === stage)?.count || 0}</span></h3>{ctx.data.records.items.filter(row => row.stage === stage).map(row => <button className="board-card" key={row.id} onClick={() => ctx.openLead(row.id)}><strong>{row.name}</strong><small>{row.company}</small><Badge value={row.potential}/><span>{label(row.priority)}</span></button>)}</section>)}</div><p className="widget-footnote">Stage counts cover this view. Cards show the current directory page; open a card to inspect its evidence.</p><DirectoryPages/></>;
+@@ -64 +68 @@ function useWidgetPage<T>(endpoint: 'tasks' | 'calls', ctx: Context, limit: numb
+-  const queryKey = JSON.stringify(ctx.query); const cursor = ctx.bootstrap.cursor;
++  const queryKey = JSON.stringify(ctx.query); const cursor = ctx.bootstrap.cursor; const [retry, setRetry] = useState(0);
+@@ -67,2 +71,2 @@ function useWidgetPage<T>(endpoint: 'tasks' | 'calls', ctx: Context, limit: numb
+-    const controller = new AbortController(); setError('');
+-    void api<{items: T[]; has_more: boolean}>(`/api/workspace/${endpoint}/query`, 'POST', {view_id: ctx.viewId, query: JSON.parse(queryKey), page, page_size: limit}, controller.signal).then(setValue).catch(e => { if (!controller.signal.aborted) setError((e as Error).message); });
++    const controller = new AbortController(); setError(''); setValue(null);
++    void readApi<{items: T[]; has_more: boolean}>(`/api/workspace/${endpoint}/query`, 'POST', {view_id: ctx.viewId, query: JSON.parse(queryKey), page, page_size: limit}, controller.signal).then(setValue).catch(e => { if (!controller.signal.aborted) setError((e as Error).message); });
+@@ -70,2 +74,2 @@ function useWidgetPage<T>(endpoint: 'tasks' | 'calls', ctx: Context, limit: numb
+-  }, [endpoint, queryKey, ctx.viewId, page, limit, cursor]);
+-  return {page, setPage, value, error};
++  }, [endpoint, queryKey, ctx.viewId, page, limit, cursor, ctx.dataVersion, retry]);
++  return {page, setPage, value, error, retry: () => setRetry(n => n + 1)};
+@@ -79 +83 @@ function Commitments({ widgetId }: { widgetId: string }) {
+-  if (result.error) return <p className="error">{result.error}</p>;
++  if (result.error) return <div role="alert"><p className="error">{result.error}</p><button onClick={result.retry}>Retry loading this widget</button></div>;
+@@ -87 +91 @@ function CallTimeline({ widgetId }: { widgetId: string }) {
+-  if (result.error) return <p className="error">{result.error}</p>;
++  if (result.error) return <div role="alert"><p className="error">{result.error}</p><button onClick={result.retry}>Retry loading this widget</button></div>;
+diff --git a/frontend/src/editors.tsx b/frontend/src/editors.tsx
+index a28ff07..77bccb7 100644
+--- a/frontend/src/editors.tsx
++++ b/frontend/src/editors.tsx
+@@ -28 +28 @@ export function ViewEditor({ view, bootstrap, duplicate = false, initialQuery, c
+-      await save([op], duplicate ? `Created view “${name}”` : `Updated view “${name}”`, duplicate ? id : undefined); close();
++      await save([op, ...(duplicate ? [{ op: 'edit_view' as const, view_id: id, emphasis }] : [])], duplicate ? `Created view “${name}”` : `Updated view “${name}”`, duplicate ? id : undefined); close();
+diff --git a/frontend/src/geometry.ts b/frontend/src/geometry.ts
+new file mode 100644
+index 0000000..5c8d7c9
+--- /dev/null
++++ b/frontend/src/geometry.ts
+@@ -0,0 +1,42 @@
++import type { Geometry } from './types';
++
++export type GeometryChange = 'up' | 'down' | 'wider' | 'narrower' | 'taller' | 'shorter';
++const overlapsX = (a: Geometry, b: Geometry) => a.x < b.x + b.w && a.x + a.w > b.x;
++const overlaps = (a: Geometry, b: Geometry) => overlapsX(a, b) && a.y < b.y + b.h && a.y + a.h > b.y;
++
++/** Keyboard operations use the same bounded geometry as pointer operations.
++ * Move before/after a neighbouring panel, rather than moving two cells into a
++ * collision and silently snapping back. Pins are immovable obstacles.
++ */
++export function changeGeometry(layout: Geometry[], id: string, change: GeometryChange, pinned: Set<string>, cols: number): Geometry[] {
++  const next = structuredClone(layout);
++  const item = next.find(g => g.i === id);
++  if (!item || pinned.has(id)) throw new Error('This widget is not movable.');
++  const peers = next.filter(g => g.i !== id && overlapsX(g, item)).sort((a, b) => a.y - b.y);
++  if (change === 'up') {
++    const previous = peers.filter(g => g.y < item.y).at(-1);
++    item.y = previous?.y ?? Math.max(0, item.y - 2);
++  }
++  if (change === 'down') {
++    const following = peers.find(g => g.y >= item.y);
++    item.y = following ? following.y + following.h : item.y + 2;
++  }
++  if (change === 'wider') item.w = Math.min(cols - item.x, item.w + 1);
++  if (change === 'narrower') item.w = Math.max(4, item.w - 1);
++  if (change === 'taller') item.h = Math.min(30, item.h + 1);
++  if (change === 'shorter') item.h = Math.max(4, item.h - 1);
++  const fixed = next.filter(g => pinned.has(g.i));
++  if (fixed.some(g => overlaps(item, g))) throw new Error('That change would overlap a pinned widget. Move elsewhere or unpin it first.');
++  const placed = [...fixed, item];
++  // Give the requested panel precedence; move only colliding, unlocked peers.
++  for (const panel of next.filter(g => g.i !== id && !pinned.has(g.i)).sort((a, b) => a.y - b.y || a.x - b.x)) {
++    for (let n = 0; n <= next.length; n++) {
++      const collisions = placed.filter(g => overlaps(panel, g));
++      if (!collisions.length) break;
++      panel.y = Math.max(...collisions.map(g => g.y + g.h));
++    }
++    placed.push(panel);
++  }
++  if (next.some(g => g.y > 500)) throw new Error('The canvas height limit was reached. Remove or shorten a panel first.');
++  return next;
++}
