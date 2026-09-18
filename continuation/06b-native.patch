@@ -1,0 +1,356 @@
+diff --git a/frontend/e2e/acceptance.spec.ts b/frontend/e2e/acceptance.spec.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..37ba325d66225c7dd1286c5a786feb4225e731c2 100644
+--- /dev/null
++++ b/frontend/e2e/acceptance.spec.ts
+@@ -0,0 +1,241 @@
++import { test, expect } from './fixtures';
++import { authenticate, createView, headers, login, more, organize, state } from './helpers';
++import type { Breakpoint } from '../src/types';
++
++test.describe('complete shared-workspace acceptance', () => {
++  // These are multi-command end-to-end scenarios, with no retries or skipped steps.
++  test.setTimeout(90000);
++
++  test('AI geometry, keyboard reorder, pointer drag/resize, pin and later AI edits persist', async ({ page, request }, info) => {
++    await login(page);
++    const name = `Shared geometry ${info.project.name}`;
++    await createView(page, name, 'decision_process');
++    const initial = await state(request);
++    const view = initial.spec.views.find(v => v.name === name)!;
++    expect(view.emphasis).toBe('decision_process');
++    const table = view.widgets.find(id => initial.spec.widgets[id].kind === 'LeadsTable')!;
++    const changes = view.widgets.find(id => initial.spec.widgets[id].kind === 'RecentChanges')!;
++    await organize(page, 'Rearrange canvas');
++    const planned = await state(request);
++    const plan = planned.spec.views.find(v => v.id === view.id)!;
++    for (const bp of ['lg','md','sm'] as Breakpoint[]) {
++      expect(plan.layouts[bp]).not.toEqual(view.layouts[bp]);
++      expect(plan.layouts[bp].find(g => g.i === changes)!.y).toBe(0);
++    }
++    const tablePanel = page.locator(`[data-widget-id="${table}"]`);
++    const changesPanel = page.locator(`[data-widget-id="${changes}"]`);
++    expect((await changesPanel.boundingBox())!.y).toBeLessThan((await tablePanel.boundingBox())!.y);
++    await page.getByRole('button', { name: 'Customize canvas', exact: true }).click();
++    // Exercise a real keyboard activation, not a direct state/API layout write.
++    await page.getByRole('button', { name: 'Up Lead directory', exact: true }).focus();
++    await page.keyboard.press('Enter');
++    await page.getByRole('button', { name: 'Save layout', exact: true }).click();
++    await expect(page.getByText('Layout changes are not saved yet')).not.toBeVisible();
++    const reordered = await state(request);
++    const bp: Breakpoint = info.project.name.includes('mobile') ? 'sm' : 'lg';
++    const geometry = reordered.spec.views.find(v => v.id === view.id)!.layouts[bp];
++    expect(geometry.find(g => g.i === table)!.y).toBeLessThan(geometry.find(g => g.i === changes)!.y);
++    const height = geometry.find(g => g.i === table)!.h;
++    if (info.project.name.includes('desktop')) {
++      const handle = tablePanel.locator('.react-resizable-handle').last();
++      await handle.scrollIntoViewIfNeeded(); const box = (await handle.boundingBox())!;
++      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
++      await page.mouse.down();
++      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 + 44, { steps: 10 });
++      await page.mouse.up();
++    } else {
++      await page.getByRole('button', { name: 'Taller Lead directory', exact: true }).click();
++    }
++    await page.getByRole('button', { name: 'Save layout', exact: true }).click();
++    await expect(page.getByText('Layout changes are not saved yet')).not.toBeVisible();
++    const resized = await state(request);
++    expect(resized.spec.views.find(v => v.id === view.id)!.layouts[bp].find(g => g.i === table)!.h).toBeGreaterThan(height);
++    await page.getByLabel('Pin Lead directory', { exact: true }).click();
++    await expect(page.getByLabel('Unpin Lead directory', { exact: true })).toBeVisible();
++    if (info.project.name.includes('desktop')) {
++      const beforeDrag = await state(request);
++      const layout = beforeDrag.spec.views.find(v => v.id === view.id)!.layouts.lg;
++      const handle = changesPanel.locator('.widget-drag-handle');
++      await handle.scrollIntoViewIfNeeded(); const box = (await handle.boundingBox())!;
++      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
++      await page.mouse.down();
++      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 + 66, { steps: 12 });
++      await page.mouse.up();
++      await page.getByRole('button', { name: 'Save layout', exact: true }).click();
++      await expect(page.getByText('Layout changes are not saved yet')).not.toBeVisible();
++      const dragged = (await state(request)).spec.views.find(v => v.id === view.id)!.layouts.lg;
++      expect(dragged.find(g => g.i === changes)!.y).toBeGreaterThan(layout.find(g => g.i === changes)!.y);
++      expect(dragged.find(g => g.i === table)).toEqual(layout.find(g => g.i === table));
++    }
++    await page.getByRole('button', { name: 'Finish customizing', exact: true }).click();
++    const pinned = await state(request);
++    await organize(page, 'Adjust unpinned canvas');
++    const after = await state(request);
++    expect(after.spec.widgets[table]).toEqual(pinned.spec.widgets[table]);
++    const finalView = after.spec.views.find(v => v.id === view.id)!;
++    expect(finalView.widgets).toEqual(view.widgets);
++    for (const breakpoint of ['lg','md','sm'] as Breakpoint[]) {
++      const saved = pinned.spec.views.find(v => v.id === view.id)!.layouts[breakpoint];
++      expect(finalView.layouts[breakpoint].find(g => g.i === table)).toEqual(saved.find(g => g.i === table));
++      expect(finalView.layouts[breakpoint]).not.toEqual(saved);
++    }
++    await page.reload();
++    await page.getByRole('button', { name, exact: true }).click();
++    await expect(page.getByLabel('Unpin Lead directory', { exact: true })).toBeVisible();
++    expect((await state(request)).spec.views.find(v => v.id === view.id)).toEqual(finalView);
++    await page.screenshot({path: `test-results/${info.project.name}-shared-layout.png`, fullPage: true});
++  });
++
++  test('suggestions require approval; locked views reject agent and manual changes', async ({ page, request }) => {
++    await login(page);
++    await page.getByLabel('Organization mode', { exact: true }).selectOption('suggest');
++    await expect.poll(async () => (await state(request)).spec.mode).toBe('suggest');
++    const before = await state(request);
++    await organize(page, 'Show leads awaiting a proposal, grouped by priority');
++    const proposed = await state(request);
++    expect(proposed.version).toBe(before.version);
++    expect(proposed.spec.views.some(v => v.id === 'fixture_proposals')).toBe(false);
++    expect(proposed.proposals).toHaveLength(1);
++    await page.getByRole('button', { name: 'Review changes', exact: true }).click();
++    const review = page.getByRole('dialog', { name: 'Review organization changes' });
++    await expect(review.locator('pre')).toContainText('awaiting_proposal');
++    await review.getByRole('button', { name: 'Approve saved change' }).click();
++    await expect.poll(async () => (await state(request)).spec.views.some(v => v.id === 'fixture_proposals')).toBe(true);
++    await review.getByRole('button', { name: 'Close Review organization changes' }).click();
++    await page.getByRole('button', { name: 'Awaiting proposals', exact: true }).click();
++    await expect(page.locator('.group-row').first()).toBeVisible();
++    expect((await state(request)).spec.views.find(v => v.id === 'fixture_proposals')!.query.group).toBe('priority');
++    await more(page, 'Lock view');
++    const locked = await state(request);
++    expect(locked.spec.views.find(v => v.id === 'fixture_proposals')!.locked).toBe(true);
++    await page.getByRole('button', { name: 'Customize canvas', exact: true }).click();
++    await expect(page.getByRole('button', { name: 'Taller Lead directory', exact: true })).toBeDisabled();
++    await page.getByRole('button', { name: 'Finish customizing', exact: true }).click();
++    // The model tries a forbidden layout patch. The real worker rejects it;
++    // no proposal or partial layout can escape server validation.
++    await page.getByLabel('Workspace instruction').fill('Rearrange canvas');
++    await page.getByRole('button', { name: 'Organize', exact: true }).click();
++    await expect(page.locator('.job-status')).toContainText(/retry|failed/);
++    const unchanged = await state(request);
++    expect(unchanged.version).toBe(locked.version);
++    expect(unchanged.spec).toEqual(locked.spec);
++    expect(unchanged.proposals).toHaveLength(0);
++    await more(page, 'Unlock view');
++    await expect.poll(async () => (await state(request)).spec.views.find(v => v.id === 'fixture_proposals')!.locked).toBe(false);
++  });
++
++  test('columns, board-only pagination, history undo and reset retain records', async ({ page, request }, info) => {
++    await login(page); await createView(page, 'Manual composition');
++    await page.getByRole('button', { name: 'Customize canvas', exact: true }).click();
++    await page.getByLabel('Configure Lead directory', { exact: true }).click();
++    const editor = page.getByRole('dialog', { name: 'Configure widget' });
++    await editor.getByLabel('Title', { exact: true }).fill('Configured directory');
++    await editor.getByLabel('company column width').fill('230');
++    await editor.getByLabel('Move company left', { exact: true }).click();
++    await editor.getByLabel('confidence', { exact: true }).uncheck();
++    await editor.getByRole('button', { name: 'Save widget', exact: true }).click();
++    await expect(editor).not.toBeVisible();
++    const columns = await state(request);
++    const view = columns.spec.views.find(v => v.name === 'Manual composition')!;
++    const tableId = view.widgets.find(id => columns.spec.widgets[id].kind === 'LeadsTable')!;
++    const table = columns.spec.widgets[tableId];
++    expect(table.columns[0]).toMatchObject({field:'company', width:230, visible:true});
++    expect(table.columns.find(c => c.field === 'confidence')!.visible).toBe(false);
++    await expect(page.locator('.leads-table th').nth(1)).toContainText('company');
++    await expect(page.locator('.leads-table thead')).not.toContainText('confidence');
++    await page.getByRole('button', { name: 'Remove Configured directory', exact: true }).click();
++    await expect(page.locator('.leads-table')).toHaveCount(0);
++    await page.getByRole('button', { name: 'Finish customizing', exact: true }).click();
++    const board = page.locator('.board').locator('..');
++    await expect(board.locator('.board-card')).toHaveCount(25);
++    await board.getByRole('button', { name: 'Next', exact: true }).click();
++    await expect(board.locator('.board-card')).toHaveCount(6);
++    await expect(board.getByLabel('Lead directory pages')).toContainText('26–31 of 31');
++    await board.locator('.board-card').first().click();
++    const detail = page.locator('dialog[open]');
++    await expect(detail).toContainText('All calls');
++    await page.keyboard.press('Escape');
++    await more(page, 'History / undo / reset');
++    await page.getByRole('button', { name: 'Undo last workspace change', exact: true }).click();
++    await expect(page.locator('.leads-table')).toBeVisible();
++    expect((await state(request)).spec.widgets[tableId]).toEqual(table);
++    await more(page, 'History / undo / reset');
++    page.once('dialog', dialog => dialog.accept());
++    await page.getByRole('button', { name: 'Reset layout', exact: true }).click();
++    const reset = await state(request);
++    expect(reset.spec.views.some(v => v.id === view.id)).toBe(false);
++    const records = await request.post('/api/workspace/query', { headers, data: {view_id:'all'} });
++    expect((await records.json()).total).toBe(31);
++    await page.getByRole('button', {name:'All leads', exact:true}).click();
++    await page.screenshot({path: `test-results/${info.project.name}-reset.png`, fullPage:true});
++  });
++
++  test('initial read failure is retryable; model outage leaves manual editing available', async ({ page, request }) => {
++    const original = await state(request);
++    await authenticate(page);
++    await page.route('**/api/workspace', route => route.fulfill({status:503, contentType:'application/json', body:JSON.stringify({detail:'Fictional temporary workspace read failure.'})}), {times:1});
++    await page.goto('/leads');
++    await expect(page.getByRole('alert')).toContainText('temporary workspace read failure');
++    await page.getByRole('button', {name:'Retry opening workspace'}).click();
++    await expect(page.locator('.leads-table')).toBeVisible();
++    expect((await state(request)).spec).toEqual(original.spec);
++    await organize(page, 'Provider unavailable', 'waiting configuration');
++    expect((await state(request)).spec).toEqual(original.spec);
++    await createView(page, 'Manual during outage');
++    await page.getByLabel('Search leads').fill('Acme');
++    await expect(page.locator('.lead-name')).toHaveCount(1);
++    await page.getByLabel('Pin Lead directory', {exact:true}).click();
++    await expect(page.getByLabel('Search leads')).toHaveValue('Acme');
++    await expect(page.locator('.lead-name')).toHaveCount(1);
++    await page.reload();
++    await page.getByRole('button', {name:'Manual during outage',exact:true}).click();
++    await expect(page.getByLabel('Unpin Lead directory', {exact:true})).toBeVisible();
++  });
++
++  test('competing edits fail atomically and selection evidence clears across practice', async ({ page, request }) => {
++    await login(page); await createView(page, 'Conflict check');
++    await page.getByRole('button', {name:'Customize canvas',exact:true}).click();
++    await page.getByLabel('Configure Lead directory', {exact:true}).click();
++    const editor = page.getByRole('dialog', {name:'Configure widget'});
++    await editor.getByLabel('Title', {exact:true}).fill('Must not overwrite');
++    const before = await state(request);
++    const view = before.spec.views.find(v => v.name === 'Conflict check')!;
++    const external = await request.post('/api/workspace/changes', {headers, data:{base_version:before.version, reason:'Second operator edit in isolated fixture', operations:[{op:'edit_view',view_id:view.id,name:'Newer operator name'}]}});
++    expect(external.status()).toBe(200);
++    await editor.getByRole('button', {name:'Save widget',exact:true}).click();
++    await expect(editor.getByRole('alert')).toContainText('Workspace changed');
++    expect((await state(request)).spec.widgets).toEqual(before.spec.widgets);
++    await editor.getByRole('button', {name:'Cancel',exact:true}).click();
++    await page.getByRole('button', {name:'Finish customizing',exact:true}).click();
++    await page.getByLabel('Search leads').focus();
++    await page.getByRole('button', {name:'Apply updates',exact:true}).click();
++    await expect(page.getByRole('button', {name:'Newer operator name',exact:true})).toBeVisible();
++    await page.getByRole('button', {name:'Highest potential',exact:true}).click();
++    await page.locator('.lead-name').filter({hasText:'Fictional Acme'}).click();
++    await page.keyboard.press('Escape');
++    await expect(page.locator('.evidence-widget')).toContainText('manual follow-up');
++    await page.getByRole('button', {name:'Practice / demo',exact:true}).click();
++    await page.getByRole('button', {name:'Highest potential',exact:true}).click();
++    await expect(page.locator('.evidence-widget')).toHaveCount(0);
++    await expect(page.getByText('Select a lead to inspect the reasons')).toBeVisible();
++  });
++  test('all application sections and tab locking remain reachable on small screens', async ({ page }, info) => {
++    await login(page);
++    const mobile = info.project.name.includes('mobile');
++    if (mobile) await page.getByLabel('Open navigation', {exact:true}).click();
++    const navigation = page.getByRole('navigation', {name: mobile ? 'Mobile navigation' : 'Main navigation', exact:true});
++    for (const name of ['Overview','Leads','Voice lab','Playbook','Calls','Connections']) {
++      await expect(navigation.getByRole('link', {name,exact:true})).toBeVisible();
++    }
++    await navigation.getByRole('link', {name:'Connections',exact:true}).click();
++    await expect(page.getByRole('heading', {name:'Bring your tools. Keep the boundaries clear.'})).toBeVisible();
++    await page.goto('/leads');
++    await expect(page.locator('.leads-table')).toBeVisible();
++    if (mobile) await page.getByLabel('Open navigation', {exact:true}).click();
++    await page.getByRole('button', {name:'Lock workspace',exact:true}).click();
++    await expect(page.getByRole('heading', {name:'Your private sales workspace',exact:true})).toBeVisible();
++    expect(await page.evaluate(() => sessionStorage.getItem('relay-token'))).toBeNull();
++    await expect(page.locator('.leads-table')).toHaveCount(0);
++  });
++
++});
+diff --git a/frontend/e2e/helpers.ts b/frontend/e2e/helpers.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..065f624519fb03e23e0d90932e9586aa3665bf2b 100644
+--- /dev/null
++++ b/frontend/e2e/helpers.ts
+@@ -0,0 +1,51 @@
++import { expect, type APIRequestContext, type Page } from '@playwright/test';
++import type { Bootstrap } from '../src/types';
++export const token = 'relay-browser-fixture-token-not-a-production-secret';
++export const headers = { Authorization: `Bearer ${token}` };
++export async function state(request: APIRequestContext): Promise<Bootstrap> {
++  const response = await request.get('/api/workspace', { headers });
++  expect(response.ok()).toBeTruthy();
++  return response.json();
++}
++export async function authenticate(page: Page) {
++  await page.addInitScript(value => {
++    if (location.protocol === 'http:' && location.hostname === '127.0.0.1') sessionStorage.setItem('relay-token', value);
++  }, token);
++}
++export async function login(page: Page) {
++  await authenticate(page); await page.goto('/leads');
++  await expect(page.locator('.leads-table')).toBeVisible();
++}
++export async function more(page: Page, name: string) {
++  if (!await page.locator('.more-menu').getAttribute('open').then(value => value !== null)) {
++    await page.getByLabel('More workspace options').click();
++  }
++  await page.getByRole('button', { name, exact: true }).click();
++  // Close the originating menu without clicking through the modal backdrop.
++  await page.locator('.more-menu').evaluate((element: HTMLDetailsElement) => { element.open = false; });
++}
++export async function createView(page: Page, name: string, emphasis = 'overview') {
++  await page.getByRole('button', { name: 'Create saved view', exact: true }).click();
++  const dialog = page.getByRole('dialog', { name: 'Create a saved view', exact: true });
++  await dialog.getByLabel('View name').fill(name);
++  await dialog.getByLabel('Lead detail emphasis').selectOption(emphasis);
++  await dialog.getByRole('button', { name: 'Save view', exact: true }).click();
++  await expect(dialog).not.toBeVisible();
++}
++export async function organize(page: Page, text: string, status = 'succeeded') {
++  const response = page.waitForResponse(r => r.url().endsWith('/api/workspace/commands') && r.request().method() === 'POST');
++  await page.getByLabel('Workspace instruction').fill(text);
++  await page.getByRole('button', { name: 'Organize', exact: true }).click();
++  const queued = await response; expect(queued.status()).toBe(200);
++  const job = await queued.json() as {id:string};
++  await expect.poll(async () => {
++    const runs = await page.request.get('/api/workspace/jobs?limit=100', {headers});
++    const data = await runs.json() as {items:{id:string;status:string}[]};
++    return data.items.find(item => item.id === job.id)?.status;
++  }).toBe(status.replaceAll(' ', '_'));
++  // Hold automatic idle application, then deliberately accept the saved update.
++  await page.getByLabel('Search leads').focus();
++  await expect(page.locator('.job-status')).toContainText(status);
++  await expect(page.getByRole('button', { name: 'Apply updates', exact: true })).toBeEnabled();
++  await page.getByRole('button', { name: 'Apply updates', exact: true })).click();
++}
+diff --git a/frontend/unit/geometry.spec.ts b/frontend/unit/geometry.spec.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..a4256052993db450bd78de8ee38ddc955f4752ff 100644
+--- /dev/null
++++ b/frontend/unit/geometry.spec.ts
+@@ -0,0 +1,46 @@
++import { test, expect } from '@playwright/test';
++import { changeGeometry, settleGeometry } from '../src/geometry';
++import type { Geometry } from '../src/types';
++const stack: Geometry[] = [
++  {i: 'a', x: 0, y: 0, w: 4, h: 10},
++  {i: 'b', x: 0, y: 10, w: 4, h: 10},
++  {i: 'c', x: 0, y: 20, w: 4, h: 10},
++];
++test('keyboard up moves before its neighbour instead of snapping back', () => {
++  const result = changeGeometry(stack, 'b', 'up', new Set(), 4);
++  expect(result.map(g => g.y)).toEqual([10, 0, 20]);
++  expect(stack.map(g => g.y)).toEqual([0, 10, 20]);
++});
++test('keyboard down moves past its neighbour without overlapping', () => {
++  expect(changeGeometry(stack, 'a', 'down', new Set(), 4).map(g => g.y)).toEqual([20, 10, 30]);
++});
++test('resizing cascades through unpinned peers', () => {
++  expect(changeGeometry(stack, 'a', 'taller', new Set(), 4).map(g => [g.y,g.h])).toEqual([[0,11],[11,10],[21,10]]);
++});
++test('pins cannot be moved directly or by a conflicting neighbour', () => {
++  expect(() => changeGeometry(stack, 'a', 'down', new Set(['a']), 4)).toThrow('not movable');
++  expect(() => changeGeometry(stack, 'b', 'up', new Set(['a']), 4)).toThrow('pinned');
++  expect(() => changeGeometry(stack, 'a', 'taller', new Set(['b']), 4)).toThrow('pinned');
++  expect(stack.map(g => g.y)).toEqual([0,10,20]);
++});
++test('cascade skips over a pinned obstacle without changing it', () => {
++  const result = changeGeometry(stack, 'a', 'taller', new Set(['c']), 4);
++  expect(result.find(g => g.i === 'c')).toEqual(stack[2]);
++  expect(result.find(g => g.i === 'b')!.y).toBe(30);
++});
++test('width and height constraints match persisted geometry bounds', () => {
++  expect(changeGeometry(stack, 'a', 'wider', new Set(), 4)[0].w).toBe(4);
++  expect(changeGeometry(stack, 'a', 'narrower', new Set(), 4)[0].w).toBe(4);
++  expect(changeGeometry([{...stack[0],h:4}], 'a', 'shorter', new Set(), 4)[0].h).toBe(4);
++  expect(changeGeometry([{...stack[0],h:30}], 'a', 'taller', new Set(), 4)[0].h).toBe(30);
++});
++test('invalid IDs and overflowing canvas changes fail without mutation', () => {
++  expect(() => changeGeometry(stack, 'absent', 'up', new Set(), 4)).toThrow();
++  expect(() => changeGeometry([{...stack[0],y:500}], 'a', 'down', new Set(), 4)).toThrow('height limit');
++});
++
++test('pointer resize displacement uses the same collision rules without compacting gaps', () => {
++  const pointer = [{...stack[0],h:11}, stack[1], {...stack[2],y:40}];
++  expect(settleGeometry(pointer, 'a', new Set()).map(g => g.y)).toEqual([0,11,40]);
++  expect(() => settleGeometry(pointer, 'a', new Set(['b']))).toThrow('pinned');
++});
