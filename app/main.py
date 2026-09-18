@@ -113,7 +113,10 @@ def create_app(config: Config | None = None, *, provider=None, workspace_model=N
         address = request.client.host if request.client else 'unknown'
         bucket = limits[(key, address)]; now = time.monotonic()
         while bucket and bucket[0] < now-60: bucket.popleft()
-        if len(bucket) >= maximum: raise HTTPException(429, 'Too many requests. Try again in a minute.')
+        if len(bucket) >= maximum:
+            retry_after = max(1, int(60 - (now - bucket[0])) + 1)
+            raise HTTPException(429, 'Too many requests. Try again shortly.',
+                                headers={'Retry-After': str(retry_after)})
         bucket.append(now)
 
     async def admin(request: Request):

@@ -123,6 +123,21 @@ def router(store, worker, admin):
                 'fixture_mode': bool(getattr(worker.model, 'fixture_mode', False)),
             }
 
+    @result.post('/dataset')
+    def dataset(body: QueryRequest):
+        # One bounded snapshot replaces five parallel HTTP requests. Keep the
+        # same authentication, scope validation, pagination and rate limits.
+        def read():
+            query = effective(body)
+            return {
+                'records': queries.query_leads(store, query, page=body.page, page_size=body.page_size),
+                'metrics': queries.aggregates(store, query),
+                'tasks': queries.tasks_for_query(store, query, page=1, page_size=50),
+                'calls': queries.calls_for_query(store, query, page=1, page_size=50),
+                'activity': activity(query.scope)['items'],
+            }
+        return locked(read)
+
     @result.post('/query')
     def leads(body: QueryRequest):
         return locked(lambda: queries.query_leads(store, effective(body), page=body.page, page_size=body.page_size))

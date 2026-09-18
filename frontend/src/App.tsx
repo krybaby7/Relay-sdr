@@ -3,7 +3,7 @@ import { Renderer, JSONUIProvider } from '@json-render/react';
 import { Responsive, useContainerWidth, noCompactor } from 'react-grid-layout';
 import type { Layout, ResponsiveGridLayoutProps } from 'react-grid-layout';
 import type { Bootstrap, Dataset, Query, Detail, Reference, Widget, Kind, Operation, Layouts, Breakpoint, Task, Job, Revision, Mode } from './types';
-import { api, ApiError, date, events, identifier, label } from './api';
+import { api, readApi, ApiError, date, events, identifier, label } from './api';
 import { Badge, Empty, Icon, Modal, WidgetBoundary } from './ui';
 import { registry, WorkspaceData } from './catalog';
 import { AddWidget, FieldEditor, ImportEditor, LeadEditor, QueryControls, RubricEditor, ViewEditor, WidgetEditor, widgetLabels } from './editors';
@@ -43,14 +43,17 @@ export default function App() {
   const [command, setCommand] = useState(''); const [activeJob, setActiveJob] = useState<Job | null>(null); const [jobs, setJobs] = useState<Job[]>([]); const [revisions, setRevisions] = useState<Revision[]>([]);
   const [pending, setPending] = useState(false); const [refreshCounter, setRefreshCounter] = useState(0); const [dragging, setDragging] = useState(false); const [layoutDraft, setLayoutDraft] = useState<Layouts | null>(null);
   const [breakpoint, setBreakpoint] = useState<Breakpoint>('lg'); const [editCanvas, setEditCanvas] = useState(false);
+  const bootstrapLoading = useRef(false);
   const detailRequest = useRef(0); const busy = useRef(false); const lastInteraction = useRef(0); const bootRef = useRef(boot); const queryRef = useRef(query); const viewRef = useRef(viewId); const detailRef = useRef(detail);
   bootRef.current = boot; queryRef.current = query; viewRef.current = viewId; detailRef.current = detail;
   busy.current = detailOpen || !!call || !!noteSource || !!dialog || !!layoutDraft || dragging || editCanvas || selected.size > 0;
   const view = boot?.spec.views.find(v => v.id === viewId) || boot?.spec.views[0];
 
   const loadBootstrap = useCallback(async (initial = false) => {
+    if (bootstrapLoading.current) return;
+    bootstrapLoading.current = true;
     try {
-      const fresh = await api<Bootstrap>('/api/workspace');
+      const fresh = await readApi<Bootstrap>('/api/workspace');
       const id = !initial && fresh.spec.views.some(v => v.id === viewRef.current) ? viewRef.current : fresh.spec.default_view;
       const oldView = bootRef.current?.spec.views.find(v => v.id === id);
       const localQuery = queryRef.current;
@@ -60,7 +63,7 @@ export default function App() {
     } catch (e) {
       if (e instanceof ApiError && [401,403].includes(e.status)) { sessionStorage.removeItem('relay-token'); setAuthenticated(false); setBoot(null); setData(null); setDetail(null); }
       setError((e as Error).message); throw e;
-    }
+    } finally { bootstrapLoading.current = false; }
   }, []);
   useEffect(() => { if (authenticated) void loadBootstrap(true).catch(() => undefined); }, [authenticated, loadBootstrap]);
   useEffect(() => {
@@ -86,13 +89,9 @@ export default function App() {
     if (!query || !viewId || !authenticated) return;
     const controller = new AbortController(); const timer = setTimeout(() => {
       setLoading(true); const body = { view_id: viewId, query, page, page_size: 25 };
-      void Promise.all([
-        api<Dataset['records']>('/api/workspace/query', 'POST', body, controller.signal),
-        api<Dataset['metrics']>('/api/workspace/aggregates', 'POST', body, controller.signal),
-        api<Dataset['tasks']>('/api/workspace/tasks/query', 'POST', { ...body, page: 1, page_size: 50 }, controller.signal),
-        api<Dataset['calls']>('/api/workspace/calls/query', 'POST', { ...body, page: 1, page_size: 50 }, controller.signal),
-        api<{ items: Dataset['activity'] }>(`/api/workspace/activity?scope=${query.scope}`, 'GET', undefined, controller.signal),
-      ]).then(([records, metrics, tasks, calls, activity]) => { if (controller.signal.aborted) return; setData({ records, metrics, tasks, calls, activity: activity.items }); setLoading(false); }).catch(e => { if (!controller.signal.aborted) { setError((e as Error).message); setLoading(false); } });
+      void readApi<Dataset>('/api/workspace/dataset', 'POST', body, controller.signal)
+        .then(result => { if (controller.signal.aborted) return; setData(result); setLoading(false); })
+        .catch(e => { if (!controller.signal.aborted) { setError((e as Error).message); setLoading(false); } });
     }, query.search ? 250 : 0);
     return () => { clearTimeout(timer); controller.abort(); };
   }, [query, viewId, page, refreshCounter, authenticated]);
@@ -166,16 +165,16 @@ export default function App() {
       {boot.fixture_mode && <p className="notice warning fixture-banner">VERIFICATION DATASET — All people, call content and assessments shown here are fictional fixtures. No calls were placed.</p>}
       <div className="page-heading"><div><span className="eyebrow">YOUR PIPELINE, IN CONTEXT</span><h1>Leads workspace<span className="heading-dot">.</span></h1><p>Evidence you can trace. Priorities you can act on.</p></div><div className="header-actions"><button onClick={() => setDialog('import')}>Import CSV</button><button className="primary" onClick={() => setDialog('lead')}><Icon name="plus" size={16}/>Add lead</button></div></div>
       <section className="command-area" aria-label="Workspace orchestrator"><div className="command-label"><span className="agent-mark"><Icon name="spark"/></span><div><strong>Organize with your workspace agent</strong><small>Changes are saved, versioned and reversible. No outreach permissions.</small></div><label className="mode-selector"><span className="sr-only">Organization mode</span><select aria-label="Organization mode" value={boot.spec.mode} onChange={e => action(save([{ op: 'preferences', mode: e.target.value as Mode, default_view: boot.spec.default_view, allow_structural_auto: boot.spec.allow_structural_auto }], `Organization mode changed to ${e.target.value}`))}><option value="adaptive">Adaptive</option><option value="suggest">Suggest</option><option value="manual">Manual</option></select></label></div>
-        <form className="command-form" onSubmit={e => { e.preventDefault(); void sendCommand(); }}><input aria-label="Workspace instruction" placeholder="Show leads awaiting a proposal, grouped by priority…" maxLength={2000} value={command} onChange={e => setCommand(e.target.value)}/><button className="primary" disabled={!modelReady || !command.trim()} title={!modelReady ? 'Configure server-side workspace reasoning first' : 'Submit internal organization command'}><Icon name="arrow" size={18}/><span>Organize</span></button></form>
+        <form className="command-form" onSubmit={e => { e.preventDefault(); void sendCommand(); }}><input aria-label="Workspace instruction" placeholder="Show leads awaiting a proposal, grouped by priority…" maxLength={2000} value={command} onChange={e => setCommand(e.target.value)}/><button className="primary" aria-label="Organize" disabled={!modelReady || !command.trim()} title={!modelReady ? 'Configure server-side workspace reasoning first' : 'Submit internal organization command'}><Icon name="arrow" size={18}/><span>Organize</span></button></form>
         <div className="command-chips">{['Move callbacks due today to the top and pin the call history.','Create a view of promising leads blocked by procurement.','I have twenty minutes. Show where a decision from me would unblock progress.'].map((example, index) => <button key={example} onClick={() => setCommand(example)}>{['Callbacks due today','Procurement blockers','Where I can unblock progress'][index]} <span>↗</span></button>)}</div>
         {!modelReady && <p className="setup-note">Manual workspace editing is available now. {boot.orchestrator.paused ? 'Workspace reasoning is paused.' : 'Enable server-side workspace reasoning and configure a model key to use the agent.'} <button className="text-button" onClick={() => setDialog('settings')}>Setup & limits</button></p>}
         {activeJob && <div className={`job-status ${activeJob.status}`} role="status"><Icon name="spark" size={14}/><span>{label(activeJob.status)} · {activeJob.error || activeJob.result?.workspace?.reason || (activeJob.status === 'succeeded' ? `Workspace ${activeJob.result?.workspace?.status || 'updated'}. Saved changes will appear when it is safe to apply them.` : 'Internal organization is queued on the server. This does not contact leads.')}</span><button className="text-button" onClick={() => action(showJobs())}>Run details</button></div>}
       </section>
-      {error && <div className="alert error" role="alert"><span>{error} The last valid saved workspace is retained.</span><button aria-label="Dismiss error" onClick={() => setError('')}><Icon name="close" size={15}/></button></div>}
+      {error && <div className="alert error" role="alert"><span>{error} The last valid saved workspace is retained.</span><button onClick={() => { setError(''); setRefreshCounter(n => n + 1); }}>Retry loading data</button><button aria-label="Dismiss error" onClick={() => setError('')}><Icon name="close" size={15}/></button></div>}
       {notice && <div className="alert success" role="status"><Icon name="check" size={15}/><span>{notice}</span><button aria-label="Dismiss notification" onClick={() => setNotice('')}><Icon name="close" size={15}/></button></div>}
       {pending && <div className="alert pending" role="status"><Icon name="spark" size={16}/><span>Saved updates are ready. {busy.current ? 'Your active selection, editing session or detail view is protected.' : 'Updates apply after a brief idle period.'}</span><button disabled={busy.current} onClick={() => action(loadBootstrap())}>Apply updates</button></div>}
       {!!boot.proposals.length && <div className="alert pending"><span>{boot.proposals.length} organization proposal{boot.proposals.length === 1 ? '' : 's'} awaiting review.</span><button onClick={() => setDialog('proposals')}>Review changes</button></div>}
-      <nav className="view-tabs" aria-label="Saved views">{boot.spec.views.map(saved => <button key={saved.id} className={saved.id === view.id ? 'active' : ''} onClick={() => changeView(saved.id)}>{saved.locked && <Icon name="lock" size={12}/>}<span>{saved.name}</span>{saved.id === view.id && data && <small>{data.records.total}</small>}</button>)}<button className="new-view" aria-label="Create saved view" onClick={() => setDialog('duplicate')}><Icon name="plus" size={16}/></button></nav>
+      <nav className="view-tabs" aria-label="Saved views">{boot.spec.views.map(saved => <button key={saved.id} aria-label={saved.name} aria-pressed={saved.id === view.id} aria-description={saved.id === view.id && data ? `${data.records.total} matching records` : undefined} className={saved.id === view.id ? 'active' : ''} onClick={() => changeView(saved.id)}>{saved.locked && <Icon name="lock" size={12}/>}<span>{saved.name}</span>{saved.id === view.id && data && <small>{data.records.total}</small>}</button>)}<button className="new-view" aria-label="Create saved view" onClick={() => setDialog('duplicate')}><Icon name="plus" size={16}/></button></nav>
       <div className="view-description"><p>{definitions[view.id] || 'A custom saved query. Filters and ordering are visible in Customize view.'}</p><button className="text-button" onClick={() => setDialog('view')}>View definition <Icon name="sliders" size={13}/></button></div>
       {query.scope === 'practice' && <div className="notice practice-note"><strong>Practice is isolated.</strong> Fictional samples and browser/demo calls never count as real sales activity. <button onClick={() => action(api('/api/sample-leads', 'POST').then(() => { setRefreshCounter(n => n + 1); }))}>Add labeled sample contacts</button><a href="/#lab">Open voice lab ↗</a></div>}
       {!boot.rubric.approved && <div className="rubric-banner"><span><Icon name="book" size={15}/>Your sales rubric is awaiting approval. Unknown leads remain unassessed.</span><button className="text-button" onClick={() => setDialog('rubric')}>Review rubric</button></div>}
@@ -190,7 +189,7 @@ export default function App() {
           onBreakpointChange={setBreakpoint} onDragStart={() => setDragging(true)} onResizeStart={() => setDragging(true)} onDragStop={captureLayout} onResizeStop={captureLayout}>
           {view.widgets.map(id => { const widget = boot.spec.widgets[id]; return <section className={`widget ${widget.pinned ? 'pinned' : ''}`} key={id} data-widget-id={id} aria-label={widget.title}>
             <header className="widget-header"><div className="widget-drag-handle"><Icon name={widget.kind === 'CallTimeline' ? 'phone' : widget.kind === 'Commitments' ? 'clock' : widget.kind === 'EvidencePanel' ? 'link' : 'grid'} size={16}/><h2>{widget.title}</h2>{widget.pinned && <span title="Pinned against agent changes"><Icon name="pin" size={13}/></span>}</div><div><button className="icon-button" aria-label={`${widget.pinned ? 'Unpin' : 'Pin'} ${widget.title}`} disabled={view.locked} onClick={() => action(save([{ op: 'pin_widget', view_id: view.id, widget_id: id, pinned: !widget.pinned }], `${widget.pinned ? 'Unpinned' : 'Pinned'} ${widget.title}`))}><Icon name="pin" size={14}/></button>{editCanvas && <button className="icon-button" aria-label={`Configure ${widget.title}`} disabled={view.locked} onClick={() => { setWidgetId(id); setDialog('widget'); }}><Icon name="sliders" size={14}/></button>}</div></header>
-            {editCanvas && <div className="keyboard-layout" aria-label={`Keyboard controls for ${widget.title}`}>{(['up','down','wider','narrower','taller','shorter'] as const).map(change => <button key={change} aria-label={`${label(change)} ${widget.title}`} disabled={widget.pinned || view.locked} onClick={() => keyboardGeometry(id, change)}>{label(change)}</button>)}<button className="danger-text" aria-label={`Remove ${widget.title}`} disabled={view.locked || widget.pinned} onClick={() => action(save([{ op: 'remove_widget', view_id: view.id, widget_id: id }], `Removed ${widget.title}; records retained`))}>Remove</button></div>}
+            {editCanvas && <div className="keyboard-layout" aria-label={`Keyboard controls for ${widget.title}`}>{(['up','down','wider','narrower','taller','shorter'] as const).map(change => <button key={change} aria-label={`${change[0].toUpperCase() + change.slice(1)} ${widget.title}`} disabled={widget.pinned || view.locked} onClick={() => keyboardGeometry(id, change)}>{label(change)}</button>)}<button className="danger-text" aria-label={`Remove ${widget.title}`} disabled={view.locked || widget.pinned} onClick={() => action(save([{ op: 'remove_widget', view_id: view.id, widget_id: id }], `Removed ${widget.title}; records retained`))}>Remove</button></div>}
             <div className="widget-content"><WidgetBoundary><Renderer registry={registry} spec={{ root: id, elements: { [id]: { type: widget.kind, props: { widgetId: id }, children: [] } } }}/></WidgetBoundary></div>
           </section>; })}
         </MeasuredGrid>}

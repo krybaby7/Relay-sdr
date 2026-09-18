@@ -1,16 +1,18 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import type { APIRequestContext, Page } from '@playwright/test';
 import type { Bootstrap, Detail, RecordPage } from '../src/types';
 
-// Recovered WIP acceptance suite. A previous run had failures; this is not a pass claim.
+// Full production-route acceptance with a clearly labeled deterministic model.
 const token = 'relay-browser-fixture-token-not-a-production-secret';
-const headers = { Authorization: `Bearer ${token}`, Origin: 'http://127.0.0.1:8091' };
+const headers = { Authorization: `Bearer ${token}` };
 
 async function state(request: APIRequestContext): Promise<Bootstrap> {
   return (await request.get('/api/workspace', { headers })).json();
 }
 async function login(page: Page) {
-  await page.addInitScript(value => sessionStorage.setItem('relay-token', value), token);
+  await page.addInitScript(value => {
+    if (location.protocol === 'http:' && location.hostname === '127.0.0.1') sessionStorage.setItem('relay-token', value);
+  }, token);
   await page.goto('/leads');
   await expect(page.locator('.leads-table')).toBeVisible();
 }
@@ -71,7 +73,7 @@ test('manual views, actual responsive resize, pins, model edits and reload share
   await expect(page.locator('.job-status')).toContainText('succeeded');
   await page.getByLabel('Search leads').focus();
   await page.getByRole('button', { name: 'Apply updates', exact: true }).click();
-  // Known historical failure: active tab name included a trailing count, e.g. "Agent-organized leads 31".
+  // View accessible names remain stable as matching counts change.
   await expect(page.getByRole('button', { name: 'Agent-organized leads', exact: true })).toBeVisible();
   const current = await state(request);
   const view = current.spec.views.find(v => v.name === 'Agent-organized leads')!;

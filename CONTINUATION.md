@@ -58,3 +58,33 @@ Actions run 35285742889. Native results: `verification/preservation-2026-09-18/R
 - browser: exit 1
 
 The frontend lockfile was regenerated from pinned direct dependencies, not recovered from the old filesystem. Browser checks use a disposable loopback server, fictional records and a mocked model. No live provider/model verification, public deployment, outbound enablement, lead contact or main/recovery changes. This remains a WIP checkpoint. Read actual failures before continuing; do not infer full acceptance from baseline or integrity passes.
+
+## Native implementation milestone — 2026-09-18
+
+Continued from `37d5c3a25c4173df8371cd11ba99a54325fad972`; remote still matched
+that anchor when inspected. `516d793541ebd871c3e482ad7d49cfee989cdf5b` added
+fresh native verification (no recovery scripts/patches applied). That fresh run
+35314035701 passed integrity, 155 backend tests and frontend typecheck/lint/build.
+
+Implemented stable accessible names for saved views and the mobile Organize
+button, consistently named keyboard geometry controls, a single authenticated
+bounded dataset read, read-only 429 retry honoring Retry-After, and an explicit
+retry-data control. Original 180/minute admin and bad-auth limits remain intact.
+The initial browser rerun reproduced unstable names and request exhaustion.
+After those fixes, the previously unreached persistence path exposed the test
+helper writing sessionStorage on opaque about:blank; scoped that helper to the
+local HTTP fixture. Every browser scenario now owns a fresh server, worker and
+SQLite database (no production bypass/reset endpoint, no shared rate-limit state).
+
+Local commands: `python recovery/ai-leads-workspace-v2/verify_github_checkpoint.py`;
+`python -m pytest tests/test_workspace_http.py -q` (9 passed, 1 upstream warning);
+`cd frontend && npm run typecheck && npm run lint && npm run build` (all passed);
+`RELAY_TEST_PYTHON=/mnt/data/relay-venv/bin/python PLAYWRIGHT_BROWSERS_PATH=/mnt/data/playwright npm run test:e2e`
+(8 passed in 36.3s, zero skipped/retries). The path variables are this session's
+isolated toolchain only; normal setup uses your Python and Playwright installation.
+All source data/model responses are fictional. No real provider calls were made.
+
+Remaining at this milestone: broaden UI acceptance (actual model-planned geometry,
+board/columns/history/undo/locks/error recovery); audit all original requirements;
+finish architecture/setup/license documentation, full regression rerun, screenshots
+and unmerged pull request. This milestone is not a completed release claim.

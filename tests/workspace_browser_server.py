@@ -45,11 +45,11 @@ class BrowserModel(FixtureModel):
         return super().generate(stage, payload, output_model)
 
 
-def build_app(path: Path):
+def build_app(path: Path, port: int = 8091):
     config = Config(data_dir=path, admin_token=TOKEN, workspace_enabled=True,
                     workspace_model='mock-browser-fixture', workspace_settle_seconds=0.05,
                     workspace_poll_seconds=0.05, workspace_daily_requests=10000,
-                    workspace_daily_tokens=100000000, enable_outbound=False, port=8091)
+                    workspace_daily_tokens=100000000, enable_outbound=False, port=port)
     app = create_app(config, workspace_model=BrowserModel())
     store = app.state.store
     store.setting('playbook', dict(store.get_setting('playbook'), approved=True, product='Fictional verified workflow product.'))
@@ -96,4 +96,4 @@ if __name__ == '__main__':
     parser.add_argument('--port', type=int, default=8091)
     args = parser.parse_args()
     with tempfile.TemporaryDirectory(prefix='relay-browser-fixture-') as temp:
-        uvicorn.run(build_app(Path(temp)), host='127.0.0.1', port=args.port, log_level='warning')
+        uvicorn.run(build_app(Path(temp), args.port), host='127.0.0.1', port=args.port, log_level='warning')

@@ -1,5 +1,5 @@
 export class ApiError extends Error {
-  constructor(message: string, public status: number) { super(message); }
+  constructor(message: string, public status: number, public retryAfter = 1) { super(message); }
 }
 export async function api<T>(path: string, method = 'GET', body?: unknown, signal?: AbortSignal): Promise<T> {
   const token = sessionStorage.getItem('relay-token') || '';
@@ -9,11 +9,36 @@ export async function api<T>(path: string, method = 'GET', body?: unknown, signa
   if (!response.ok) {
     const error: { detail?: unknown } = await response.json().catch(() => ({}));
     const detail = typeof error.detail === 'string' ? error.detail : JSON.stringify(error.detail || `HTTP ${response.status}`);
-    throw new ApiError(detail, response.status);
+    const seconds = Number(response.headers.get('Retry-After') || '1');
+    throw new ApiError(detail, response.status, Number.isFinite(seconds) ? Math.max(1, Math.min(seconds, 60)) : 1);
   }
   const value = await response.json() as T;
   if (signal?.aborted || sessionStorage.getItem('relay-token') !== token) throw new DOMException('Request superseded', 'AbortError');
   return value;
+}
+// Only explicitly allowlisted read-only endpoints may be retried, including
+// POST queries. Never replay a command, correction, booking or other mutation.
+const READ_POSTS = new Set(['/api/workspace/dataset', '/api/workspace/query', '/api/workspace/aggregates', '/api/workspace/tasks/query', '/api/workspace/calls/query']);
+function delay(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const abort = () => { clearTimeout(timer); reject(new DOMException('Request cancelled', 'AbortError')); };
+    const timer = setTimeout(() => { signal?.removeEventListener('abort', abort); resolve(); }, ms);
+    if (signal?.aborted) abort(); else signal?.addEventListener('abort', abort, { once: true });
+  });
+}
+export async function readApi<T>(path: string, method = 'GET', body?: unknown, signal?: AbortSignal): Promise<T> {
+  if (!(method === 'GET' && path.startsWith('/api/workspace')) && !(method === 'POST' && READ_POSTS.has(path))) {
+    throw new Error('Only workspace reads can be retried.');
+  }
+  const token = sessionStorage.getItem('relay-token');
+  for (let attempt = 0; ; attempt++) {
+    try { return await api<T>(path, method, body, signal); }
+    catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 429 || attempt >= 2) throw error;
+      await delay(error.retryAfter * 1000, signal);
+      if (sessionStorage.getItem('relay-token') !== token) throw new DOMException('Session changed', 'AbortError');
+    }
+  }
 }
 export const label = (value: unknown) => value === undefined || value === null || value === '' ? 'Unknown' : String(value).replaceAll('_', ' ');
 export function date(value: string | null | undefined, zone = 'Africa/Cairo') {
@@ -42,6 +67,6 @@ export async function events(after: number, signal: AbortSignal, receive: (curso
       if (signal.aborted) return;
       if (error instanceof ApiError && [401, 403].includes(error.status)) return;
     }
-    await new Promise<void>(resolve => { const timer = setTimeout(resolve, 3000); signal.addEventListener('abort', () => { clearTimeout(timer); resolve(); }, { once: true }); });
+    await delay(3000, signal).catch(() => undefined);
   }
 }
