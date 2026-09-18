@@ -1,5 +1,5 @@
 {
-  "source_commit": "4b317dadcd2d7138223ff1fc12f8e0d4bc0867aa",
+  "source_commit": "de7c04b2ed0199f072e66ac14469f705210f0c95",
   "initial_worktree_status": "",
   "source_sha256": {
     "app/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -21,7 +21,7 @@
     "app/workspace/routes.py": "472b10dfffb7cbd0d34116b6cabe5807439355d9fe11ded7ba878ebb9a0ebf70",
     "app/workspace/schema.py": "a47c7a60b0e6afc5fe13a7d5a4ee939f116ea96b17ee2663f8d7674064ed1cc1",
     "app/workspace/worker.py": "9b0137fc7e48a0e41865000c2723735aacf4ae45bade398bc7326c0083475a56",
-    "frontend/e2e/acceptance.spec.ts": "8b5b96b5f80bbf6e01d633c43a17302d5e0ada936c1c306c771418c21578b54c",
+    "frontend/e2e/acceptance.spec.ts": "48c6d16563230c7df9093f365fa7c1309f44a0e32a66971b7b7a306c21870549",
     "frontend/e2e/fixtures.ts": "0902dde958f47a143bd72983058628383b9aebed60283b9e62922181dcb5602b",
     "frontend/e2e/helpers.ts": "c69b95f819eb39f5d890f0c8aad326adca481031b8d2945bc63144bb5afd9991",
     "frontend/e2e/rendering.spec.ts": "cab138bb259ea8050bc052286e634ad511c547d2e701085d9f6f4b2c790d2da6",
@@ -81,7 +81,7 @@
       ],
       "cwd": ".",
       "exit_code": 0,
-      "seconds": 19.16
+      "seconds": 19.21
     },
     {
       "name": "typecheck",
@@ -92,7 +92,7 @@
       ],
       "cwd": "frontend",
       "exit_code": 0,
-      "seconds": 3.99
+      "seconds": 4.14
     },
     {
       "name": "lint",
@@ -103,7 +103,7 @@
       ],
       "cwd": "frontend",
       "exit_code": 0,
-      "seconds": 1.52
+      "seconds": 1.93
     },
     {
       "name": "unit",
@@ -114,7 +114,7 @@
       ],
       "cwd": "frontend",
       "exit_code": 0,
-      "seconds": 1.37
+      "seconds": 1.52
     },
     {
       "name": "build",
@@ -125,7 +125,7 @@
       ],
       "cwd": "frontend",
       "exit_code": 0,
-      "seconds": 2.23
+      "seconds": 2.32
     },
     {
       "name": "browser",
@@ -135,9 +135,9 @@
         "test:e2e"
       ],
       "cwd": "frontend",
-      "exit_code": 1,
-      "seconds": 198.29
+      "exit_code": 0,
+      "seconds": 118.51
     }
   ],
-  "all_executed_checks_passed": false
+  "all_executed_checks_passed": true
 }

@@ -5,202 +5,27 @@
 
 Running 22 tests using 1 worker
 
-  ✘   1 [chromium-desktop] › e2e/acceptance.spec.ts:9:3 › complete shared-workspace acceptance › AI geometry, keyboard reorder, pointer drag/resize, pin and later AI edits persist (6.0s)
-  ✓   2 [chromium-desktop] › e2e/acceptance.spec.ts:89:3 › complete shared-workspace acceptance › suggestions require approval; locked views reject agent and manual changes (8.8s)
-  ✓   3 [chromium-desktop] › e2e/acceptance.spec.ts:127:3 › complete shared-workspace acceptance › columns, board-only pagination, history undo and reset retain records (4.7s)
-  ✓   4 [chromium-desktop] › e2e/acceptance.spec.ts:173:3 › complete shared-workspace acceptance › initial read failure is retryable; model outage leaves manual editing available (6.2s)
-  ✓   5 [chromium-desktop] › e2e/acceptance.spec.ts:195:3 › complete shared-workspace acceptance › competing edits fail atomically and selection evidence clears across practice (3.8s)
-  ✓   6 [chromium-desktop] › e2e/acceptance.spec.ts:222:3 › complete shared-workspace acceptance › all application sections and tab locking remain reachable on small screens (2.9s)
+  ✓   1 [chromium-desktop] › e2e/acceptance.spec.ts:9:3 › complete shared-workspace acceptance › AI geometry, keyboard reorder, pointer drag/resize, pin and later AI edits persist (10.5s)
+  ✓   2 [chromium-desktop] › e2e/acceptance.spec.ts:94:3 › complete shared-workspace acceptance › suggestions require approval; locked views reject agent and manual changes (8.8s)
+  ✓   3 [chromium-desktop] › e2e/acceptance.spec.ts:132:3 › complete shared-workspace acceptance › columns, board-only pagination, history undo and reset retain records (4.6s)
+  ✓   4 [chromium-desktop] › e2e/acceptance.spec.ts:178:3 › complete shared-workspace acceptance › initial read failure is retryable; model outage leaves manual editing available (6.3s)
+  ✓   5 [chromium-desktop] › e2e/acceptance.spec.ts:200:3 › complete shared-workspace acceptance › competing edits fail atomically and selection evidence clears across practice (4.0s)
+  ✓   6 [chromium-desktop] › e2e/acceptance.spec.ts:230:3 › complete shared-workspace acceptance › all application sections and tab locking remain reachable on small screens (2.9s)
   ✓   7 [chromium-desktop] › e2e/rendering.spec.ts:4:1 › settled rendered geometry is non-overlapping and fits the viewport (2.7s)
-  ✓   8 [chromium-desktop] › e2e/workspace.spec.ts:29:1 › real rendered workspace loads, navigates and exposes source evidence (4.8s)
-  ✓   9 [chromium-desktop] › e2e/workspace.spec.ts:63:1 › manual views, actual responsive resize, pins, model edits and reload share persisted state (6.5s)
-  ✓  10 [chromium-desktop] › e2e/workspace.spec.ts:116:1 › typed fields, confirmed human corrections and exact human source navigation (4.6s)
-  ✓  11 [chromium-desktop] › e2e/workspace.spec.ts:155:1 › search, empty states and practice remain scoped; busy interaction holds updates (4.1s)
-  ✘  12 [chromium-mobile] › e2e/acceptance.spec.ts:9:3 › complete shared-workspace acceptance › AI geometry, keyboard reorder, pointer drag/resize, pin and later AI edits persist (5.6s)
-  ✓  13 [chromium-mobile] › e2e/acceptance.spec.ts:89:3 › complete shared-workspace acceptance › suggestions require approval; locked views reject agent and manual changes (8.5s)
-  ✓  14 [chromium-mobile] › e2e/acceptance.spec.ts:127:3 › complete shared-workspace acceptance › columns, board-only pagination, history undo and reset retain records (4.2s)
-  ✓  15 [chromium-mobile] › e2e/acceptance.spec.ts:173:3 › complete shared-workspace acceptance › initial read failure is retryable; model outage leaves manual editing available (6.1s)
-  ✘  16 [chromium-mobile] › e2e/acceptance.spec.ts:195:3 › complete shared-workspace acceptance › competing edits fail atomically and selection evidence clears across practice (1.5m)
-  ✓  17 [chromium-mobile] › e2e/acceptance.spec.ts:222:3 › complete shared-workspace acceptance › all application sections and tab locking remain reachable on small screens (3.0s)
+  ✓   8 [chromium-desktop] › e2e/workspace.spec.ts:29:1 › real rendered workspace loads, navigates and exposes source evidence (4.9s)
+  ✓   9 [chromium-desktop] › e2e/workspace.spec.ts:63:1 › manual views, actual responsive resize, pins, model edits and reload share persisted state (6.6s)
+  ✓  10 [chromium-desktop] › e2e/workspace.spec.ts:116:1 › typed fields, confirmed human corrections and exact human source navigation (4.9s)
+  ✓  11 [chromium-desktop] › e2e/workspace.spec.ts:155:1 › search, empty states and practice remain scoped; busy interaction holds updates (4.3s)
+  ✓  12 [chromium-mobile] › e2e/acceptance.spec.ts:9:3 › complete shared-workspace acceptance › AI geometry, keyboard reorder, pointer drag/resize, pin and later AI edits persist (9.5s)
+  ✓  13 [chromium-mobile] › e2e/acceptance.spec.ts:94:3 › complete shared-workspace acceptance › suggestions require approval; locked views reject agent and manual changes (8.3s)
+  ✓  14 [chromium-mobile] › e2e/acceptance.spec.ts:132:3 › complete shared-workspace acceptance › columns, board-only pagination, history undo and reset retain records (4.2s)
+  ✓  15 [chromium-mobile] › e2e/acceptance.spec.ts:178:3 › complete shared-workspace acceptance › initial read failure is retryable; model outage leaves manual editing available (6.2s)
+  ✓  16 [chromium-mobile] › e2e/acceptance.spec.ts:200:3 › complete shared-workspace acceptance › competing edits fail atomically and selection evidence clears across practice (4.0s)
+  ✓  17 [chromium-mobile] › e2e/acceptance.spec.ts:230:3 › complete shared-workspace acceptance › all application sections and tab locking remain reachable on small screens (2.9s)
   ✓  18 [chromium-mobile] › e2e/rendering.spec.ts:4:1 › settled rendered geometry is non-overlapping and fits the viewport (2.6s)
   ✓  19 [chromium-mobile] › e2e/workspace.spec.ts:29:1 › real rendered workspace loads, navigates and exposes source evidence (3.6s)
   ✓  20 [chromium-mobile] › e2e/workspace.spec.ts:63:1 › manual views, actual responsive resize, pins, model edits and reload share persisted state (6.1s)
   ✓  21 [chromium-mobile] › e2e/workspace.spec.ts:116:1 › typed fields, confirmed human corrections and exact human source navigation (3.9s)
   ✓  22 [chromium-mobile] › e2e/workspace.spec.ts:155:1 › search, empty states and practice remain scoped; busy interaction holds updates (4.1s)
 
-
-  1) [chromium-desktop] › e2e/acceptance.spec.ts:9:3 › complete shared-workspace acceptance › AI geometry, keyboard reorder, pointer drag/resize, pin and later AI edits persist 
-
-    Error: expect(received).toBeLessThan(expected)
-
-    Expected: < 1051.4208984375
-    Received:   1160.488037109375
-
-      25 |     const tablePanel = page.locator(`[data-widget-id="${table}"]`);
-      26 |     const changesPanel = page.locator(`[data-widget-id="${changes}"]`);
-    > 27 |     expect((await changesPanel.boundingBox())!.y).toBeLessThan((await tablePanel.boundingBox())!.y);
-         |                                                   ^
-      28 |     await page.getByRole('button', { name: 'Customize canvas', exact: true }).click();
-      29 |     // Exercise a real keyboard activation, not a direct state/API layout write.
-      30 |     await page.getByRole('button', { name: 'Up Lead directory', exact: true }).focus();
-        at /home/runner/work/Relay-sdr/Relay-sdr/frontend/e2e/acceptance.spec.ts:27:51
-
-    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
-    test-results/acceptance-complete-shared-60df2--and-later-AI-edits-persist-chromium-desktop/test-failed-1.png
-    ────────────────────────────────────────────────────────────────────────────────────────────────
-
-    Error Context: test-results/acceptance-complete-shared-60df2--and-later-AI-edits-persist-chromium-desktop/error-context.md
-
-    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
-    test-results/acceptance-complete-shared-60df2--and-later-AI-edits-persist-chromium-desktop/trace.zip
-    Usage:
-
-        npx playwright show-trace test-results/acceptance-complete-shared-60df2--and-later-AI-edits-persist-chromium-desktop/trace.zip
-
-    ────────────────────────────────────────────────────────────────────────────────────────────────
-
-  2) [chromium-mobile] › e2e/acceptance.spec.ts:9:3 › complete shared-workspace acceptance › AI geometry, keyboard reorder, pointer drag/resize, pin and later AI edits persist 
-
-    Error: expect(received).toBeLessThan(expected)
-
-    Expected: < 707.4175415039062
-    Received:   1024.7255859375
-
-      25 |     const tablePanel = page.locator(`[data-widget-id="${table}"]`);
-      26 |     const changesPanel = page.locator(`[data-widget-id="${changes}"]`);
-    > 27 |     expect((await changesPanel.boundingBox())!.y).toBeLessThan((await tablePanel.boundingBox())!.y);
-         |                                                   ^
-      28 |     await page.getByRole('button', { name: 'Customize canvas', exact: true }).click();
-      29 |     // Exercise a real keyboard activation, not a direct state/API layout write.
-      30 |     await page.getByRole('button', { name: 'Up Lead directory', exact: true }).focus();
-        at /home/runner/work/Relay-sdr/Relay-sdr/frontend/e2e/acceptance.spec.ts:27:51
-
-    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
-    test-results/acceptance-complete-shared-60df2--and-later-AI-edits-persist-chromium-mobile/test-failed-1.png
-    ────────────────────────────────────────────────────────────────────────────────────────────────
-
-    Error Context: test-results/acceptance-complete-shared-60df2--and-later-AI-edits-persist-chromium-mobile/error-context.md
-
-    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
-    test-results/acceptance-complete-shared-60df2--and-later-AI-edits-persist-chromium-mobile/trace.zip
-    Usage:
-
-        npx playwright show-trace test-results/acceptance-complete-shared-60df2--and-later-AI-edits-persist-chromium-mobile/trace.zip
-
-    ────────────────────────────────────────────────────────────────────────────────────────────────
-
-  3) [chromium-mobile] › e2e/acceptance.spec.ts:195:3 › complete shared-workspace acceptance › competing edits fail atomically and selection evidence clears across practice 
-
-    Test timeout of 90000ms exceeded.
-
-    Error: locator.click: Test timeout of 90000ms exceeded.
-    Call log:
-      - waiting for getByRole('button', { name: 'Practice / demo', exact: true })
-        - locator resolved to <button class="" aria-pressed="false" aria-label="Practice / demo">…</button>
-      - attempting click action
-        - waiting for element to be visible, enabled and stable
-        - element is visible, enabled and stable
-        - scrolling into view if needed
-        - done scrolling
-        - <header class="modal-header">…</header> from <div aria-busy="false" class="workspace-canvas ">…</div> subtree intercepts pointer events
-      - retrying click action
-        - waiting for element to be visible, enabled and stable
-        - element is visible, enabled and stable
-        - scrolling into view if needed
-        - done scrolling
-        - <span>authority</span> from <div aria-busy="false" class="workspace-canvas ">…</div> subtree intercepts pointer events
-      - retrying click action
-        - waiting 20ms
-        - waiting for element to be visible, enabled and stable
-        - element is visible, enabled and stable
-        - scrolling into view if needed
-        - done scrolling
-        - <button class="">Commitments</button> from <div aria-busy="false" class="workspace-canvas ">…</div> subtree intercepts pointer events
-      2 × retrying click action
-          - waiting 100ms
-          - waiting for element to be visible, enabled and stable
-          - element is visible, enabled and stable
-          - scrolling into view if needed
-          - done scrolling
-          - <dialog open="" class="modal wide" aria-label="Fictional Acme">…</dialog> from <div aria-busy="false" class="workspace-canvas ">…</div> subtree intercepts pointer events
-      41 × retrying click action
-           - waiting 500ms
-           - waiting for element to be visible, enabled and stable
-           - element is visible, enabled and stable
-           - scrolling into view if needed
-           - done scrolling
-           - <span>authority</span> from <div aria-busy="false" class="workspace-canvas ">…</div> subtree intercepts pointer events
-         - retrying click action
-           - waiting 500ms
-           - waiting for element to be visible, enabled and stable
-           - element is visible, enabled and stable
-           - scrolling into view if needed
-           - done scrolling
-           - <button class="">Commitments</button> from <div aria-busy="false" class="workspace-canvas ">…</div> subtree intercepts pointer events
-         - retrying click action
-           - waiting 500ms
-           - waiting for element to be visible, enabled and stable
-           - element is visible, enabled and stable
-           - scrolling into view if needed
-           - done scrolling
-           - <dialog open="" class="modal wide" aria-label="Fictional Acme">…</dialog> from <div aria-busy="false" class="workspace-canvas ">…</div> subtree intercepts pointer events
-         - retrying click action
-           - waiting 500ms
-           - waiting for element to be visible, enabled and stable
-           - element is visible, enabled and stable
-           - scrolling into view if needed
-           - done scrolling
-           - <dialog open="" class="modal wide" aria-label="Fictional Acme">…</dialog> from <div aria-busy="false" class="workspace-canvas ">…</div> subtree intercepts pointer events
-      - retrying click action
-        - waiting 500ms
-        - waiting for element to be visible, enabled and stable
-        - element is visible, enabled and stable
-        - scrolling into view if needed
-        - done scrolling
-        - <span>authority</span> from <div aria-busy="false" class="workspace-canvas ">…</div> subtree intercepts pointer events
-      - retrying click action
-        - waiting 500ms
-        - waiting for element to be visible, enabled and stable
-        - element is visible, enabled and stable
-        - scrolling into view if needed
-        - done scrolling
-        - <button class="">Commitments</button> from <div aria-busy="false" class="workspace-canvas ">…</div> subtree intercepts pointer events
-      - retrying click action
-        - waiting 500ms
-        - waiting for element to be visible, enabled and stable
-        - element is visible, enabled and stable
-        - scrolling into view if needed
-        - done scrolling
-        - <dialog open="" class="modal wide" aria-label="Fictional Acme">…</dialog> from <div aria-busy="false" class="workspace-canvas ">…</div> subtree intercepts pointer events
-      - retrying click action
-        - waiting 500ms
-
-
-      215 |     await page.keyboard.press('Escape');
-      216 |     await expect(page.locator('.evidence-widget')).toContainText('manual follow-up');
-    > 217 |     await page.getByRole('button', {name:'Practice / demo',exact:true}).click();
-          |                                                                         ^
-      218 |     await page.getByRole('button', {name:'Highest potential',exact:true}).click();
-      219 |     await expect(page.locator('.evidence-widget')).toHaveCount(0);
-      220 |     await expect(page.getByText('Select a lead to inspect the reasons')).toBeVisible();
-        at /home/runner/work/Relay-sdr/Relay-sdr/frontend/e2e/acceptance.spec.ts:217:73
-
-    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
-    test-results/acceptance-complete-shared-dc601-ence-clears-across-practice-chromium-mobile/test-failed-1.png
-    ────────────────────────────────────────────────────────────────────────────────────────────────
-
-    Error Context: test-results/acceptance-complete-shared-dc601-ence-clears-across-practice-chromium-mobile/error-context.md
-
-    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
-    test-results/acceptance-complete-shared-dc601-ence-clears-across-practice-chromium-mobile/trace.zip
-    Usage:
-
-        npx playwright show-trace test-results/acceptance-complete-shared-dc601-ence-clears-across-practice-chromium-mobile/trace.zip
-
-    ────────────────────────────────────────────────────────────────────────────────────────────────
-
-  3 failed
-    [chromium-desktop] › e2e/acceptance.spec.ts:9:3 › complete shared-workspace acceptance › AI geometry, keyboard reorder, pointer drag/resize, pin and later AI edits persist 
-    [chromium-mobile] › e2e/acceptance.spec.ts:9:3 › complete shared-workspace acceptance › AI geometry, keyboard reorder, pointer drag/resize, pin and later AI edits persist 
-    [chromium-mobile] › e2e/acceptance.spec.ts:195:3 › complete shared-workspace acceptance › competing edits fail atomically and selection evidence clears across practice 
-  19 passed (3.3m)
+  22 passed (2.0m)

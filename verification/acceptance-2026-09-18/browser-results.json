@@ -18,24 +18,24 @@
     "maxFailures": 0,
     "metadata": {
       "ci": {
-        "commitHref": "https://github.com/krybaby7/Relay-sdr/commit/feef0a956ea19cd6ebef233f1664555a3df86373",
-        "commitHash": "feef0a956ea19cd6ebef233f1664555a3df86373",
-        "buildHref": "https://github.com/krybaby7/Relay-sdr/actions/runs/35325613258"
+        "commitHref": "https://github.com/krybaby7/Relay-sdr/commit/cb28c7fc60c1edb42f8abcc49d004f68807f440d",
+        "commitHash": "cb28c7fc60c1edb42f8abcc49d004f68807f440d",
+        "buildHref": "https://github.com/krybaby7/Relay-sdr/actions/runs/35326541860"
       },
       "gitCommit": {
-        "shortHash": "4b317da",
-        "hash": "4b317dadcd2d7138223ff1fc12f8e0d4bc0867aa",
-        "subject": "feat(workspace): finish shared AI/manual acceptance, mobile controls, restart safety and documentation",
-        "body": "feat(workspace): finish shared AI/manual acceptance, mobile controls, restart safety and documentation\n",
+        "shortHash": "de7c04b",
+        "hash": "de7c04b2ed0199f072e66ac14469f705210f0c95",
+        "subject": "test(workspace): synchronize actual geometry and dialog readiness without weakening acceptance",
+        "body": "test(workspace): synchronize actual geometry and dialog readiness without weakening acceptance\n",
         "author": {
           "name": "Relay workspace implementation",
           "email": "41898282+github-actions[bot]@users.noreply.github.com",
-          "time": 1789720889000
+          "time": 1789721556000
         },
         "committer": {
           "name": "Relay workspace implementation",
           "email": "41898282+github-actions[bot]@users.noreply.github.com",
-          "time": 1789720889000
+          "time": 1789721556000
         },
         "branch": "feat/ai-leads-workspace-continue"
       },
@@ -49,24 +49,24 @@
         "retries": 0,
         "metadata": {
           "ci": {
-            "commitHref": "https://github.com/krybaby7/Relay-sdr/commit/feef0a956ea19cd6ebef233f1664555a3df86373",
-            "commitHash": "feef0a956ea19cd6ebef233f1664555a3df86373",
-            "buildHref": "https://github.com/krybaby7/Relay-sdr/actions/runs/35325613258"
+            "commitHref": "https://github.com/krybaby7/Relay-sdr/commit/cb28c7fc60c1edb42f8abcc49d004f68807f440d",
+            "commitHash": "cb28c7fc60c1edb42f8abcc49d004f68807f440d",
+            "buildHref": "https://github.com/krybaby7/Relay-sdr/actions/runs/35326541860"
           },
           "gitCommit": {
-            "shortHash": "4b317da",
-            "hash": "4b317dadcd2d7138223ff1fc12f8e0d4bc0867aa",
-            "subject": "feat(workspace): finish shared AI/manual acceptance, mobile controls, restart safety and documentation",
-            "body": "feat(workspace): finish shared AI/manual acceptance, mobile controls, restart safety and documentation\n",
+            "shortHash": "de7c04b",
+            "hash": "de7c04b2ed0199f072e66ac14469f705210f0c95",
+            "subject": "test(workspace): synchronize actual geometry and dialog readiness without weakening acceptance",
+            "body": "test(workspace): synchronize actual geometry and dialog readiness without weakening acceptance\n",
             "author": {
               "name": "Relay workspace implementation",
               "email": "41898282+github-actions[bot]@users.noreply.github.com",
-              "time": 1789720889000
+              "time": 1789721556000
             },
             "committer": {
               "name": "Relay workspace implementation",
               "email": "41898282+github-actions[bot]@users.noreply.github.com",
-              "time": 1789720889000
+              "time": 1789721556000
             },
             "branch": "feat/ai-leads-workspace-continue"
           },
@@ -87,24 +87,24 @@
         "retries": 0,
         "metadata": {
           "ci": {
-            "commitHref": "https://github.com/krybaby7/Relay-sdr/commit/feef0a956ea19cd6ebef233f1664555a3df86373",
-            "commitHash": "feef0a956ea19cd6ebef233f1664555a3df86373",
-            "buildHref": "https://github.com/krybaby7/Relay-sdr/actions/runs/35325613258"
+            "commitHref": "https://github.com/krybaby7/Relay-sdr/commit/cb28c7fc60c1edb42f8abcc49d004f68807f440d",
+            "commitHash": "cb28c7fc60c1edb42f8abcc49d004f68807f440d",
+            "buildHref": "https://github.com/krybaby7/Relay-sdr/actions/runs/35326541860"
           },
           "gitCommit": {
-            "shortHash": "4b317da",
-            "hash": "4b317dadcd2d7138223ff1fc12f8e0d4bc0867aa",
-            "subject": "feat(workspace): finish shared AI/manual acceptance, mobile controls, restart safety and documentation",
-            "body": "feat(workspace): finish shared AI/manual acceptance, mobile controls, restart safety and documentation\n",
+            "shortHash": "de7c04b",
+            "hash": "de7c04b2ed0199f072e66ac14469f705210f0c95",
+            "subject": "test(workspace): synchronize actual geometry and dialog readiness without weakening acceptance",
+            "body": "test(workspace): synchronize actual geometry and dialog readiness without weakening acceptance\n",
             "author": {
               "name": "Relay workspace implementation",
               "email": "41898282+github-actions[bot]@users.noreply.github.com",
-              "time": 1789720889000
+              "time": 1789721556000
             },
             "committer": {
               "name": "Relay workspace implementation",
               "email": "41898282+github-actions[bot]@users.noreply.github.com",
-              "time": 1789720889000
+              "time": 1789721556000
             },
             "branch": "feat/ai-leads-workspace-continue"
           },
@@ -161,7 +161,7 @@
           "specs": [
             {
               "title": "AI geometry, keyboard reorder, pointer drag/resize, pin and later AI edits persist",
-              "ok": false,
+              "ok": true,
               "tags": [],
               "tests": [
                 {
@@ -174,58 +174,18 @@
                     {
                       "workerIndex": 0,
                       "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 5957,
-                      "error": {
-                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeLessThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: < \u001b[32m1051.4208984375\u001b[39m\nReceived:   \u001b[31m1160.488037109375\u001b[39m",
-                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeLessThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: < \u001b[32m1051.4208984375\u001b[39m\nReceived:   \u001b[31m1160.488037109375\u001b[39m\n    at /home/runner/work/Relay-sdr/Relay-sdr/frontend/e2e/acceptance.spec.ts:27:51",
-                        "location": {
-                          "file": "/home/runner/work/Relay-sdr/Relay-sdr/frontend/e2e/acceptance.spec.ts",
-                          "column": 51,
-                          "line": 27
-                        },
-                        "snippet": "\u001b[0m \u001b[90m 25 |\u001b[39m     \u001b[36mconst\u001b[39m tablePanel \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m`[data-widget-id=\"${table}\"]`\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 26 |\u001b[39m     \u001b[36mconst\u001b[39m changesPanel \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m`[data-widget-id=\"${changes}\"]`\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 27 |\u001b[39m     expect((\u001b[36mawait\u001b[39m changesPanel\u001b[33m.\u001b[39mboundingBox())\u001b[33m!\u001b[39m\u001b[33m.\u001b[39my)\u001b[33m.\u001b[39mtoBeLessThan((\u001b[36mawait\u001b[39m tablePanel\u001b[33m.\u001b[39mboundingBox())\u001b[33m!\u001b[39m\u001b[33m.\u001b[39my)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                   \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 28 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgetByRole(\u001b[32m'button'\u001b[39m\u001b[33m,\u001b[39m { name\u001b[33m:\u001b[39m \u001b[32m'Customize canvas'\u001b[39m\u001b[33m,\u001b[39m exact\u001b[33m:\u001b[39m \u001b[36mtrue\u001b[39m })\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\n \u001b[90m 29 |\u001b[39m     \u001b[90m// Exercise a real keyboard activation, not a direct state/API layout write.\u001b[39m\n \u001b[90m 30 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgetByRole(\u001b[32m'button'\u001b[39m\u001b[33m,\u001b[39m { name\u001b[33m:\u001b[39m \u001b[32m'Up Lead directory'\u001b[39m\u001b[33m,\u001b[39m exact\u001b[33m:\u001b[39m \u001b[36mtrue\u001b[39m })\u001b[33m.\u001b[39mfocus()\u001b[33m;\u001b[39m\u001b[0m"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/home/runner/work/Relay-sdr/Relay-sdr/frontend/e2e/acceptance.spec.ts",
-                            "column": 51,
-                            "line": 27
-                          },
-                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeLessThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: < \u001b[32m1051.4208984375\u001b[39m\nReceived:   \u001b[31m1160.488037109375\u001b[39m\n\n  25 |     const tablePanel = page.locator(`[data-widget-id=\"${table}\"]`);\n  26 |     const changesPanel = page.locator(`[data-widget-id=\"${changes}\"]`);\n> 27 |     expect((await changesPanel.boundingBox())!.y).toBeLessThan((await tablePanel.boundingBox())!.y);\n     |                                                   ^\n  28 |     await page.getByRole('button', { name: 'Customize canvas', exact: true }).click();\n  29 |     // Exercise a real keyboard activation, not a direct state/API layout write.\n  30 |     await page.getByRole('button', { name: 'Up Lead directory', exact: true }).focus();\n    at /home/runner/work/Relay-sdr/Relay-sdr/frontend/e2e/acceptance.spec.ts:27:51"
-                        }
-                      ],
+                      "status": "passed",
+                      "duration": 10497,
+                      "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-09-18T08:42:21.850Z",
+                      "startTime": "2026-09-18T08:53:46.823Z",
                       "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/home/runner/work/Relay-sdr/Relay-sdr/frontend/test-results/acceptance-complete-shared-60df2--and-later-AI-edits-persist-chromium-desktop/test-failed-1.png"
-                        },
-                        {
-                          "name": "error-context",
-                          "contentType": "text/markdown",
-                          "path": "/home/runner/work/Relay-sdr/Relay-sdr/frontend/test-results/acceptance-complete-shared-60df2--and-later-AI-edits-persist-chromium-desktop/error-context.md"
-                        },
-                        {
-                          "name": "trace",
-                          "contentType": "application/zip",
-                          "path": "/home/runner/work/Relay-sdr/Relay-sdr/frontend/test-results/acceptance-complete-shared-60df2--and-later-AI-edits-persist-chromium-desktop/trace.zip"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/home/runner/work/Relay-sdr/Relay-sdr/frontend/e2e/acceptance.spec.ts",
-                        "column": 51,
-                        "line": 27
-                      }
+                      "attachments": []
                     }
                   ],
-                  "status": "unexpected"
+                  "status": "expected"
                 }
               ],
               "id": "6bf654160f377cf56a60-7e1caf577dd3888ac9f8",
@@ -246,15 +206,15 @@
                   "projectName": "chromium-desktop",
                   "results": [
                     {
-                      "workerIndex": 1,
+                      "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 8780,
+                      "duration": 8761,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-09-18T08:42:28.668Z",
+                      "startTime": "2026-09-18T08:53:57.571Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -264,7 +224,7 @@
               ],
               "id": "6bf654160f377cf56a60-7d3e3d153158b5cac7b9",
               "file": "acceptance.spec.ts",
-              "line": 89,
+              "line": 94,
               "column": 3
             },
             {
@@ -280,15 +240,15 @@
                   "projectName": "chromium-desktop",
                   "results": [
                     {
-                      "workerIndex": 1,
+                      "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 4687,
+                      "duration": 4571,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-09-18T08:42:37.564Z",
+                      "startTime": "2026-09-18T08:54:06.344Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -298,7 +258,7 @@
               ],
               "id": "6bf654160f377cf56a60-a98649f4eefe625b2e36",
               "file": "acceptance.spec.ts",
-              "line": 127,
+              "line": 132,
               "column": 3
             },
             {
@@ -314,15 +274,15 @@
                   "projectName": "chromium-desktop",
                   "results": [
                     {
-                      "workerIndex": 1,
+                      "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 6196,
+                      "duration": 6282,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-09-18T08:42:42.265Z",
+                      "startTime": "2026-09-18T08:54:10.926Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -332,7 +292,7 @@
               ],
               "id": "6bf654160f377cf56a60-b88983de81519b43a8d5",
               "file": "acceptance.spec.ts",
-              "line": 173,
+              "line": 178,
               "column": 3
             },
             {
@@ -348,15 +308,15 @@
                   "projectName": "chromium-desktop",
                   "results": [
                     {
-                      "workerIndex": 1,
+                      "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 3803,
+                      "duration": 4044,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-09-18T08:42:48.476Z",
+                      "startTime": "2026-09-18T08:54:17.221Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -366,7 +326,7 @@
               ],
               "id": "6bf654160f377cf56a60-680eaf9bb75f20f97b03",
               "file": "acceptance.spec.ts",
-              "line": 195,
+              "line": 200,
               "column": 3
             },
             {
@@ -382,15 +342,15 @@
                   "projectName": "chromium-desktop",
                   "results": [
                     {
-                      "workerIndex": 1,
+                      "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 2882,
+                      "duration": 2938,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-09-18T08:42:52.291Z",
+                      "startTime": "2026-09-18T08:54:21.278Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -400,12 +360,12 @@
               ],
               "id": "6bf654160f377cf56a60-8f07529e0380c755cfd0",
               "file": "acceptance.spec.ts",
-              "line": 222,
+              "line": 230,
               "column": 3
             },
             {
               "title": "AI geometry, keyboard reorder, pointer drag/resize, pin and later AI edits persist",
-              "ok": false,
+              "ok": true,
               "tags": [],
               "tests": [
                 {
@@ -416,60 +376,20 @@
                   "projectName": "chromium-mobile",
                   "results": [
                     {
-                      "workerIndex": 2,
+                      "workerIndex": 1,
                       "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 5648,
-                      "error": {
-                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeLessThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: < \u001b[32m707.4175415039062\u001b[39m\nReceived:   \u001b[31m1024.7255859375\u001b[39m",
-                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeLessThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: < \u001b[32m707.4175415039062\u001b[39m\nReceived:   \u001b[31m1024.7255859375\u001b[39m\n    at /home/runner/work/Relay-sdr/Relay-sdr/frontend/e2e/acceptance.spec.ts:27:51",
-                        "location": {
-                          "file": "/home/runner/work/Relay-sdr/Relay-sdr/frontend/e2e/acceptance.spec.ts",
-                          "column": 51,
-                          "line": 27
-                        },
-                        "snippet": "\u001b[0m \u001b[90m 25 |\u001b[39m     \u001b[36mconst\u001b[39m tablePanel \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m`[data-widget-id=\"${table}\"]`\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 26 |\u001b[39m     \u001b[36mconst\u001b[39m changesPanel \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m`[data-widget-id=\"${changes}\"]`\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 27 |\u001b[39m     expect((\u001b[36mawait\u001b[39m changesPanel\u001b[33m.\u001b[39mboundingBox())\u001b[33m!\u001b[39m\u001b[33m.\u001b[39my)\u001b[33m.\u001b[39mtoBeLessThan((\u001b[36mawait\u001b[39m tablePanel\u001b[33m.\u001b[39mboundingBox())\u001b[33m!\u001b[39m\u001b[33m.\u001b[39my)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                   \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 28 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgetByRole(\u001b[32m'button'\u001b[39m\u001b[33m,\u001b[39m { name\u001b[33m:\u001b[39m \u001b[32m'Customize canvas'\u001b[39m\u001b[33m,\u001b[39m exact\u001b[33m:\u001b[39m \u001b[36mtrue\u001b[39m })\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\n \u001b[90m 29 |\u001b[39m     \u001b[90m// Exercise a real keyboard activation, not a direct state/API layout write.\u001b[39m\n \u001b[90m 30 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgetByRole(\u001b[32m'button'\u001b[39m\u001b[33m,\u001b[39m { name\u001b[33m:\u001b[39m \u001b[32m'Up Lead directory'\u001b[39m\u001b[33m,\u001b[39m exact\u001b[33m:\u001b[39m \u001b[36mtrue\u001b[39m })\u001b[33m.\u001b[39mfocus()\u001b[33m;\u001b[39m\u001b[0m"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/home/runner/work/Relay-sdr/Relay-sdr/frontend/e2e/acceptance.spec.ts",
-                            "column": 51,
-                            "line": 27
-                          },
-                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeLessThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: < \u001b[32m707.4175415039062\u001b[39m\nReceived:   \u001b[31m1024.7255859375\u001b[39m\n\n  25 |     const tablePanel = page.locator(`[data-widget-id=\"${table}\"]`);\n  26 |     const changesPanel = page.locator(`[data-widget-id=\"${changes}\"]`);\n> 27 |     expect((await changesPanel.boundingBox())!.y).toBeLessThan((await tablePanel.boundingBox())!.y);\n     |                                                   ^\n  28 |     await page.getByRole('button', { name: 'Customize canvas', exact: true }).click();\n  29 |     // Exercise a real keyboard activation, not a direct state/API layout write.\n  30 |     await page.getByRole('button', { name: 'Up Lead directory', exact: true }).focus();\n    at /home/runner/work/Relay-sdr/Relay-sdr/frontend/e2e/acceptance.spec.ts:27:51"
-                        }
-                      ],
+                      "status": "passed",
+                      "duration": 9465,
+                      "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-09-18T08:43:18.424Z",
+                      "startTime": "2026-09-18T08:54:48.165Z",
                       "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/home/runner/work/Relay-sdr/Relay-sdr/frontend/test-results/acceptance-complete-shared-60df2--and-later-AI-edits-persist-chromium-mobile/test-failed-1.png"
-                        },
-                        {
-                          "name": "error-context",
-                          "contentType": "text/markdown",
-                          "path": "/home/runner/work/Relay-sdr/Relay-sdr/frontend/test-results/acceptance-complete-shared-60df2--and-later-AI-edits-persist-chromium-mobile/error-context.md"
-                        },
-                        {
-                          "name": "trace",
-                          "contentType": "application/zip",
-                          "path": "/home/runner/work/Relay-sdr/Relay-sdr/frontend/test-results/acceptance-complete-shared-60df2--and-later-AI-edits-persist-chromium-mobile/trace.zip"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/home/runner/work/Relay-sdr/Relay-sdr/frontend/e2e/acceptance.spec.ts",
-                        "column": 51,
-                        "line": 27
-                      }
+                      "attachments": []
                     }
                   ],
-                  "status": "unexpected"
+                  "status": "expected"
                 }
               ],
               "id": "6bf654160f377cf56a60-293d53c440eef4e41ee3",
@@ -490,15 +410,15 @@
                   "projectName": "chromium-mobile",
                   "results": [
                     {
-                      "workerIndex": 3,
+                      "workerIndex": 1,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 8474,
+                      "duration": 8326,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-09-18T08:43:24.755Z",
+                      "startTime": "2026-09-18T08:54:57.746Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -508,7 +428,7 @@
               ],
               "id": "6bf654160f377cf56a60-dd4af2cde81cbfbb7cf1",
               "file": "acceptance.spec.ts",
-              "line": 89,
+              "line": 94,
               "column": 3
             },
             {
@@ -524,15 +444,15 @@
                   "projectName": "chromium-mobile",
                   "results": [
                     {
-                      "workerIndex": 3,
+                      "workerIndex": 1,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 4176,
+                      "duration": 4197,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-09-18T08:43:33.343Z",
+                      "startTime": "2026-09-18T08:55:06.085Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -542,7 +462,7 @@
               ],
               "id": "6bf654160f377cf56a60-073595b7fcd0bb078384",
               "file": "acceptance.spec.ts",
-              "line": 127,
+              "line": 132,
               "column": 3
             },
             {
@@ -558,15 +478,15 @@
                   "projectName": "chromium-mobile",
                   "results": [
                     {
-                      "workerIndex": 3,
+                      "workerIndex": 1,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 6078,
+                      "duration": 6200,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-09-18T08:43:37.534Z",
+                      "startTime": "2026-09-18T08:55:10.294Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -576,12 +496,12 @@
               ],
               "id": "6bf654160f377cf56a60-3a9545da9a6df8be18ac",
               "file": "acceptance.spec.ts",
-              "line": 173,
+              "line": 178,
               "column": 3
             },
             {
               "title": "competing edits fail atomically and selection evidence clears across practice",
-              "ok": false,
+              "ok": true,
               "tags": [],
               "tests": [
                 {
@@ -592,57 +512,25 @@
                   "projectName": "chromium-mobile",
                   "results": [
                     {
-                      "workerIndex": 3,
+                      "workerIndex": 1,
                       "parallelIndex": 0,
-                      "status": "timedOut",
-                      "duration": 90647,
-                      "error": {
-                        "message": "\u001b[31mTest timeout of 90000ms exceeded.\u001b[39m",
-                        "stack": "\u001b[31mTest timeout of 90000ms exceeded.\u001b[39m"
-                      },
-                      "errors": [
-                        {
-                          "message": "\u001b[31mTest timeout of 90000ms exceeded.\u001b[39m"
-                        },
-                        {
-                          "location": {
-                            "file": "/home/runner/work/Relay-sdr/Relay-sdr/frontend/e2e/acceptance.spec.ts",
-                            "column": 73,
-                            "line": 217
-                          },
-                          "message": "Error: locator.click: Test timeout of 90000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Practice / demo', exact: true })\u001b[22m\n\u001b[2m    - locator resolved to <button class=\"\" aria-pressed=\"false\" aria-label=\"Practice / demo\">…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <header class=\"modal-header\">…</header> from <div aria-busy=\"false\" class=\"workspace-canvas \">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <span>authority</span> from <div aria-busy=\"false\" class=\"workspace-canvas \">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <button class=\"\">Commitments</button> from <div aria-busy=\"false\" class=\"workspace-canvas \">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m  2 × retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m      - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <dialog open=\"\" class=\"modal wide\" aria-label=\"Fictional Acme\">…</dialog> from <div aria-busy=\"false\" class=\"workspace-canvas \">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m  41 × retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\u001b[2m       - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <span>authority</span> from <div aria-busy=\"false\" class=\"workspace-canvas \">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\u001b[2m       - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <button class=\"\">Commitments</button> from <div aria-busy=\"false\" class=\"workspace-canvas \">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\u001b[2m       - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <dialog open=\"\" class=\"modal wide\" aria-label=\"Fictional Acme\">…</dialog> from <div aria-busy=\"false\" class=\"workspace-canvas \">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\u001b[2m       - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <dialog open=\"\" class=\"modal wide\" aria-label=\"Fictional Acme\">…</dialog> from <div aria-busy=\"false\" class=\"workspace-canvas \">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 500ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <span>authority</span> from <div aria-busy=\"false\" class=\"workspace-canvas \">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 500ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <button class=\"\">Commitments</button> from <div aria-busy=\"false\" class=\"workspace-canvas \">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 500ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <dialog open=\"\" class=\"modal wide\" aria-label=\"Fictional Acme\">…</dialog> from <div aria-busy=\"false\" class=\"workspace-canvas \">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 500ms\u001b[22m\n\n\n  215 |     await page.keyboard.press('Escape');\n  216 |     await expect(page.locator('.evidence-widget')).toContainText('manual follow-up');\n> 217 |     await page.getByRole('button', {name:'Practice / demo',exact:true}).click();\n      |                                                                         ^\n  218 |     await page.getByRole('button', {name:'Highest potential',exact:true}).click();\n  219 |     await expect(page.locator('.evidence-widget')).toHaveCount(0);\n  220 |     await expect(page.getByText('Select a lead to inspect the reasons')).toBeVisible();\n    at /home/runner/work/Relay-sdr/Relay-sdr/frontend/e2e/acceptance.spec.ts:217:73"
-                        }
-                      ],
+                      "status": "passed",
+                      "duration": 3964,
+                      "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-09-18T08:43:43.623Z",
+                      "startTime": "2026-09-18T08:55:16.506Z",
                       "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/home/runner/work/Relay-sdr/Relay-sdr/frontend/test-results/acceptance-complete-shared-dc601-ence-clears-across-practice-chromium-mobile/test-failed-1.png"
-                        },
-                        {
-                          "name": "error-context",
-                          "contentType": "text/markdown",
-                          "path": "/home/runner/work/Relay-sdr/Relay-sdr/frontend/test-results/acceptance-complete-shared-dc601-ence-clears-across-practice-chromium-mobile/error-context.md"
-                        },
-                        {
-                          "name": "trace",
-                          "contentType": "application/zip",
-                          "path": "/home/runner/work/Relay-sdr/Relay-sdr/frontend/test-results/acceptance-complete-shared-dc601-ence-clears-across-practice-chromium-mobile/trace.zip"
-                        }
-                      ]
+                      "attachments": []
                     }
                   ],
-                  "status": "unexpected"
+                  "status": "expected"
                 }
               ],
               "id": "6bf654160f377cf56a60-a6fb492383d0d6a1f932",
               "file": "acceptance.spec.ts",
-              "line": 195,
+              "line": 200,
               "column": 3
             },
             {
@@ -658,15 +546,15 @@
                   "projectName": "chromium-mobile",
                   "results": [
                     {
-                      "workerIndex": 4,
+                      "workerIndex": 1,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 3011,
+                      "duration": 2871,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-09-18T08:45:15.139Z",
+                      "startTime": "2026-09-18T08:55:20.481Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -676,7 +564,7 @@
               ],
               "id": "6bf654160f377cf56a60-fcc247071b2d396f240d",
               "file": "acceptance.spec.ts",
-              "line": 222,
+              "line": 230,
               "column": 3
             }
           ]
@@ -702,15 +590,15 @@
               "projectName": "chromium-desktop",
               "results": [
                 {
-                  "workerIndex": 1,
+                  "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 2747,
+                  "duration": 2742,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-09-18T08:42:55.188Z",
+                  "startTime": "2026-09-18T08:54:24.232Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -736,15 +624,15 @@
               "projectName": "chromium-mobile",
               "results": [
                 {
-                  "workerIndex": 4,
+                  "workerIndex": 1,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 2579,
+                  "duration": 2572,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-09-18T08:45:18.270Z",
+                  "startTime": "2026-09-18T08:55:23.366Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -778,15 +666,15 @@
               "projectName": "chromium-desktop",
               "results": [
                 {
-                  "workerIndex": 1,
+                  "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 4773,
+                  "duration": 4851,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-09-18T08:42:57.952Z",
+                  "startTime": "2026-09-18T08:54:26.993Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -812,15 +700,15 @@
               "projectName": "chromium-desktop",
               "results": [
                 {
-                  "workerIndex": 1,
+                  "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 6493,
+                  "duration": 6573,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-09-18T08:43:02.736Z",
+                  "startTime": "2026-09-18T08:54:31.855Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -846,15 +734,15 @@
               "projectName": "chromium-desktop",
               "results": [
                 {
-                  "workerIndex": 1,
+                  "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 4583,
+                  "duration": 4860,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-09-18T08:43:09.242Z",
+                  "startTime": "2026-09-18T08:54:38.439Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -880,15 +768,15 @@
               "projectName": "chromium-desktop",
               "results": [
                 {
-                  "workerIndex": 1,
+                  "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 4073,
+                  "duration": 4332,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-09-18T08:43:13.837Z",
+                  "startTime": "2026-09-18T08:54:43.313Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -914,15 +802,15 @@
               "projectName": "chromium-mobile",
               "results": [
                 {
-                  "workerIndex": 4,
+                  "workerIndex": 1,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 3559,
+                  "duration": 3574,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-09-18T08:45:20.868Z",
+                  "startTime": "2026-09-18T08:55:25.955Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -948,15 +836,15 @@
               "projectName": "chromium-mobile",
               "results": [
                 {
-                  "workerIndex": 4,
+                  "workerIndex": 1,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 6090,
+                  "duration": 6097,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-09-18T08:45:24.437Z",
+                  "startTime": "2026-09-18T08:55:29.540Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -982,15 +870,15 @@
               "projectName": "chromium-mobile",
               "results": [
                 {
-                  "workerIndex": 4,
+                  "workerIndex": 1,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 3947,
+                  "duration": 3929,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-09-18T08:45:30.539Z",
+                  "startTime": "2026-09-18T08:55:35.649Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1016,15 +904,15 @@
               "projectName": "chromium-mobile",
               "results": [
                 {
-                  "workerIndex": 4,
+                  "workerIndex": 1,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 4065,
+                  "duration": 4125,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-09-18T08:45:34.499Z",
+                  "startTime": "2026-09-18T08:55:39.591Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1042,11 +930,11 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-09-18T08:42:21.085Z",
-    "duration": 197541.118,
-    "expected": 19,
+    "startTime": "2026-09-18T08:53:46.045Z",
+    "duration": 117754.805,
+    "expected": 22,
     "skipped": 0,
-    "unexpected": 3,
+    "unexpected": 0,
     "flaky": 0
   }
 }

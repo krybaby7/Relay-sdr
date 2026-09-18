@@ -1,11 +1,10 @@
 # Native workspace verification
 
+## Final clean verification — Actions 35326541860
 
-## Clean native verification — Actions 35325613258
+Source: `de7c04b2ed0199f072e66ac14469f705210f0c95`. All executed stages passed: **True**.
+Commands, timings, source hashes, per-stage logs and actual fictional screenshots
+are in `verification/acceptance-2026-09-18/`. The verification uses only mocked
+providers and loopback fixtures. No live provider or outbound operation occurred.
 
-Source commit: `4b317dadcd2d7138223ff1fc12f8e0d4bc0867aa`. All executed checks passed: **False**.
-Results, exact commands/exit codes/source hashes and fictional screenshots are
-committed under `verification/acceptance-2026-09-18/`. Read stage logs for counts
-and durations. These are mocked-provider/loopback checks, not live verification.
-
-Screenshots are actual Chromium renders of the fictional local fixture, not mockups or production records. No lead contact, deployment or real provider calls occurred.
+Prefer screenshots/*-rendered-overview.png for the settled actual desktop/mobile layout. The browser tests explicitly check non-overlap and viewport bounds before capturing them. Earlier failures are retained in Git history at df36ce182c20873392a22e9a34560b8732defa0c.

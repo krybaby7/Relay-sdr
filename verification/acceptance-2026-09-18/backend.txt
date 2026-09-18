@@ -7,4 +7,4 @@
     _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-169 passed, 1 warning in 16.88s
+169 passed, 1 warning in 16.85s
