@@ -15,6 +15,7 @@ jobs:
       WORKSPACE_OPENAI_API_KEY: ''
       TWILIO_AUTH_TOKEN: ''
       LANGSMITH_TRACING: 'false'
+      PYTHONHASHSEED: '0'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -32,12 +33,17 @@ jobs:
           mkdir -p /tmp/native-inputs/wheels /tmp/native-inputs/logs
           git rev-parse HEAD > /tmp/native-inputs/SOURCE-COMMIT
           git bundle create /tmp/native-inputs/native.bundle --all
+          python --version > /tmp/native-inputs/logs/python-version.txt
+          node --version > /tmp/native-inputs/logs/node-version.txt
           python recovery/ai-leads-workspace-v2/verify_github_checkpoint.py | tee /tmp/native-inputs/logs/integrity.txt
           python -m pip download -r requirements-dev.txt -d /tmp/native-inputs/wheels
           python -m pip install -r requirements-dev.txt
+          python -m pip freeze > /tmp/native-inputs/logs/python-packages.txt
           python -m pytest tests -q | tee /tmp/native-inputs/logs/backend.txt
+          git diff --exit-code -- recovery/ai-leads-workspace-v2
           cd frontend
           npm ci
+          npm ls --all --json > /tmp/native-inputs/logs/npm-tree.json
           npm run typecheck
           npm run lint
           npm run build
